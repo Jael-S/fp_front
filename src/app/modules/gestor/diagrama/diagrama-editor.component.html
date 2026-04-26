@@ -1,38 +1,95 @@
-<section class="editor">
-  <header class="topbar">
-    <div class="left">
-      <div class="h">Diagramador BPMN</div>
-      <div class="sub" *ngIf="politica() as p">{{ p.nombre }} · v{{ p.version }} · {{ p.estado }}</div>
-    </div>
-    <div class="right">
-      <button class="btn" type="button" (click)="validate()">Validar</button>
-      <button class="btn primary" type="button" (click)="save()" [disabled]="isSaving()">Guardar</button>
-    </div>
-  </header>
-
-  <div class="grid">
-    <app-paleta-herramientas
-      [isSaving]="isSaving()"
-      [issues]="issues()"
-      (zoomIn)="zoomIn()"
-      (zoomOut)="zoomOut()"
-      (resetView)="resetView()"
-      (validate)="validate()"
-      (save)="save()"
-      (exportPng)="exportPng()"
-      (exportPdf)="exportPdf()"
-      (autoLayout)="autoLayout()"
-    />
-
-    <div class="canvas-col" #canvasExportHost>
-      <div #propertiesHost class="properties-host" aria-hidden="true"></div>
-      <app-carriles-bpmn [propertiesPanelHost]="propertiesHost"></app-carriles-bpmn>
-    </div>
-
-    <app-panel-propiedades
-      [politicaId]="politicaId() ?? ''"
-      [selected]="selected()"
-      (saved)="onPropsSaved()"
-    />
+<div class="diagrama-editor">
+  <div class="toolbar">
+    <button type="button" (click)="guardar()" [disabled]="isSaving()">Guardar</button>
+    <button type="button" (click)="autoLayout()">Auto organizar</button>
+    <button type="button" (click)="zoomIn()">Zoom+</button>
+    <button type="button" (click)="zoomOut()">Zoom-</button>
+    <button type="button" (click)="resetZoom()">Reset</button>
+    <button type="button" (click)="exportarPNG()">PNG</button>
+    <button type="button" (click)="exportarPDF()">PDF</button>
+    <button type="button" (click)="validar()">Validar</button>
   </div>
-</section>
+
+  <div class="cuerpo">
+    <div class="paleta-lateral">
+      <div class="seccion">
+        <h3>NODOS</h3>
+        <div class="lista-nodos">
+          <div class="nodo-item" draggable="true" (dragstart)="onNodoDragStart($event, 'bpmn:StartEvent')">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="16" cy="16" r="12" fill="white" stroke="#222222" stroke-width="2" />
+            </svg>
+            <span class="nodo-texto">Inicio</span>
+          </div>
+          <div class="nodo-item" draggable="true" (dragstart)="onNodoDragStart($event, 'bpmn:Task')">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <rect x="4" y="4" width="24" height="24" rx="3" fill="white" stroke="#222222" stroke-width="2" />
+            </svg>
+            <span class="nodo-texto">Tarea</span>
+          </div>
+          <div class="nodo-item prioritario" draggable="true" (dragstart)="onNodoDragStart($event, 'bpmn:ExclusiveGateway')">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <polygon points="16,2 30,16 16,30 2,16" fill="white" stroke="#222222" stroke-width="2" />
+            </svg>
+            <span class="nodo-texto">Decisión</span>
+          </div>
+          <div class="nodo-item prioritario" draggable="true" (dragstart)="onNodoDragStart($event, 'bpmn:Task', true)">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <rect x="4" y="4" width="24" height="24" rx="3" fill="white" stroke="#222222" stroke-width="2" />
+              <path d="M 12 20 A 6 6 0 1 1 20 12" fill="none" stroke="#222222" stroke-width="2" />
+              <polygon points="20,9.5 23,13 18.8,13.3" fill="#222222" />
+            </svg>
+            <span class="nodo-texto">Iterativo</span>
+          </div>
+          <div class="nodo-item" draggable="true" (dragstart)="onNodoDragStart($event, 'bpmn:EndEvent')">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="16" cy="16" r="12" fill="white" stroke="#222222" stroke-width="4" />
+            </svg>
+            <span class="nodo-texto">Fin</span>
+          </div>
+          <div class="nodo-item prioritario" draggable="true" (dragstart)="onNodoDragStart($event, 'bpmn:ParallelGateway')">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <polygon points="16,2 30,16 16,30 2,16" fill="white" stroke="#222222" stroke-width="2" />
+              <line x1="16" y1="6" x2="16" y2="26" stroke="#222222" stroke-width="2" />
+              <line x1="6" y1="16" x2="26" y2="16" stroke="#222222" stroke-width="2" />
+            </svg>
+            <span class="nodo-texto">Paralelo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <h3>CARRILES</h3>
+        <div class="lista-carriles">
+          <div
+            *ngFor="let depto of departamentos()"
+            class="carril"
+            draggable="true"
+            (dragstart)="onCarrilDragStart($event, depto)"
+          >
+            {{ depto.nombre }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-container" (dragover)="onCanvasDragOver($event)" (drop)="onCanvasDrop($event)">
+      <div id="bpmn-canvas" class="bpmn-canvas"></div>
+    </div>
+  </div>
+
+  <div class="validation-modal-backdrop" *ngIf="showValidationModal()">
+    <div class="validation-modal">
+      <div class="validation-modal-header">
+        <h3>Validación del diagrama</h3>
+        <button type="button" (click)="closeValidationModal()">X</button>
+      </div>
+      <div class="validation-modal-body">
+        <p *ngFor="let err of validationErrors()">❌ {{ err }}</p>
+      </div>
+      <div class="validation-modal-footer">
+        <button type="button" (click)="closeValidationModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,21 +1,27 @@
-<h2 mat-dialog-title>{{ data?.politica ? 'Editar politica' : 'Crear politica' }}</h2>
-<mat-dialog-content [formGroup]="form" class="form-grid">
-  <mat-form-field appearance="outline">
-    <mat-label>Nombre</mat-label>
-    <input matInput formControlName="nombre" />
-  </mat-form-field>
+<div class="dialog">
+  <button class="close-btn" type="button" mat-dialog-close aria-label="Cerrar">X</button>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Descripcion</mat-label>
-    <textarea matInput rows="3" formControlName="descripcion"></textarea>
-  </mat-form-field>
+  <h2>{{ data.politica ? 'Editar política' : 'Crear política' }}</h2>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Diagrama JSON</mat-label>
-    <textarea matInput rows="5" formControlName="diagramaJson"></textarea>
-  </mat-form-field>
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close>Cancelar</button>
-  <button mat-flat-button color="primary" (click)="save()">{{ data?.politica ? 'Guardar' : 'Crear' }}</button>
-</mat-dialog-actions>
+  <form [formGroup]="form" class="form-grid">
+    <label>
+      Nombre <span class="required">*</span>
+      <input formControlName="nombre" />
+      <small class="error" *ngIf="form.controls.nombre.touched && form.controls.nombre.hasError('required')">
+        El nombre es obligatorio.
+      </small>
+    </label>
+
+    <label>
+      Descripción
+      <textarea rows="3" formControlName="descripcion"></textarea>
+    </label>
+  </form>
+
+  <div class="actions">
+    <button class="btn" type="button" mat-dialog-close>Cancelar</button>
+    <button class="btn-primary" type="button" (click)="save()">
+      {{ data.politica ? 'Guardar' : 'Crear' }}
+    </button>
+  </div>
+</div>

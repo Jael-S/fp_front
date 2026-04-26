@@ -1,0 +1,113 @@
+<aside class="panel">
+  <div class="head">
+    <div>
+      <div class="title">Propiedades</div>
+      <div class="sub">
+        @if (selected) {
+          <span class="pill">{{ selected.type }}</span>
+          <span class="muted">ID: {{ selected.id }}</span>
+        } @else {
+          <span class="muted">Selecciona un nodo</span>
+        }
+      </div>
+    </div>
+
+    @if (selected && (selected.type === 'bpmn:Task' || selected.type === 'bpmn:ExclusiveGateway' || selected.type === 'bpmn:InclusiveGateway')) {
+      <button class="btn" type="button" (click)="enableEdit()" [disabled]="editMode()">Editar</button>
+    }
+  </div>
+
+  @if (!selected) {
+    <div class="empty">
+      Haz clic en un nodo para configurar:
+      <ul>
+        <li>Tareas: departamento, formulario, prioridad…</li>
+        <li>Decisiones: condiciones y expresiones</li>
+      </ul>
+    </div>
+  }
+
+  @if (selected?.type === 'bpmn:Task' && taskDraft()) {
+    <section class="section">
+      <div class="section-title">PROPIEDADES DE TAREA</div>
+
+      <label class="lbl">Nombre</label>
+      <input class="inp" [(ngModel)]="taskDraft()!.nombre" [disabled]="!editMode()" />
+
+      <label class="lbl">Descripción</label>
+      <textarea class="inp area" rows="3" [(ngModel)]="taskDraft()!.descripcion" [disabled]="!editMode()"></textarea>
+
+      <label class="lbl">Departamento responsable</label>
+      <select class="inp" [(ngModel)]="taskDraft()!.departamentoId" [disabled]="!editMode()">
+        <option [ngValue]="null">— Seleccionar —</option>
+        @for (d of departamentos(); track d.id) {
+          <option [ngValue]="d.id">{{ d.nombre }}</option>
+        }
+      </select>
+
+      <label class="lbl">Formulario asociado</label>
+      <select class="inp" [(ngModel)]="taskDraft()!.formularioId" [disabled]="!editMode()">
+        <option [ngValue]="null">— Sin formulario —</option>
+        @for (f of formularios(); track f.id) {
+          <option [ngValue]="f.id">{{ f.nombre }}</option>
+        }
+      </select>
+      <div class="hint">Los formularios se listan por nodo (nodoId = ID del Task).</div>
+
+      <label class="lbl">Tiempo estimado (horas)</label>
+      <input class="inp" type="number" min="0" step="1" [(ngModel)]="taskDraft()!.tiempoEstimadoHoras" [disabled]="!editMode()" />
+
+      <label class="lbl">Prioridad por defecto</label>
+      <div class="radio-row" [class.disabled]="!editMode()">
+        <button class="chip" type="button" (click)="setPriority('ALTA')" [class.on]="taskDraft()!.prioridad === 'ALTA'" [disabled]="!editMode()">Alta</button>
+        <button class="chip" type="button" (click)="setPriority('MEDIA')" [class.on]="taskDraft()!.prioridad === 'MEDIA'" [disabled]="!editMode()">Media</button>
+        <button class="chip" type="button" (click)="setPriority('BAJA')" [class.on]="taskDraft()!.prioridad === 'BAJA'" [disabled]="!editMode()">Baja</button>
+      </div>
+
+      <label class="lbl">Instrucciones</label>
+      <textarea class="inp area" rows="5" [(ngModel)]="taskDraft()!.instrucciones" [disabled]="!editMode()"></textarea>
+
+      <div class="actions">
+        <button class="btn" type="button" (click)="cancel()" [disabled]="!editMode()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="saveTask()" [disabled]="!editMode()">Guardar</button>
+      </div>
+    </section>
+  }
+
+  @if ((selected?.type === 'bpmn:ExclusiveGateway' || selected?.type === 'bpmn:InclusiveGateway') && gwDraft()) {
+    <section class="section">
+      <div class="section-title">PROPIEDADES DE DECISIÓN</div>
+
+      <label class="lbl">Etiqueta</label>
+      <input class="inp" [(ngModel)]="gwDraft()!.nombre" [disabled]="!editMode()" />
+
+      <div class="lbl">Condiciones de salida</div>
+      <div class="conds">
+        @for (c of gwDraft()!.condiciones; track c.id) {
+          <div class="cond-row">
+            <input class="inp" placeholder="Label (Sí/No…)" [(ngModel)]="c.label" [disabled]="!editMode()" />
+            <input class="inp" placeholder="Expresión ({monto} <= 10000)" [(ngModel)]="c.expression" [disabled]="!editMode()" />
+            <button class="x" type="button" (click)="removeCondition(c.id)" [disabled]="!editMode()">✕</button>
+          </div>
+        }
+        <button class="btn soft" type="button" (click)="addCondition()" [disabled]="!editMode()">+ Agregar condición</button>
+      </div>
+
+      <label class="lbl">Expresión (global)</label>
+      <input class="inp" placeholder="{puntaje} >= 70" [(ngModel)]="gwDraft()!.expresionGlobal" [disabled]="!editMode()" />
+
+      <div class="actions">
+        <button class="btn" type="button" (click)="cancel()" [disabled]="!editMode()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="saveGateway()" [disabled]="!editMode()">Guardar</button>
+      </div>
+    </section>
+  }
+
+  @if (selected && selected.type !== 'bpmn:Task' && selected.type !== 'bpmn:ExclusiveGateway' && selected.type !== 'bpmn:InclusiveGateway') {
+    <div class="empty">
+      Este nodo no tiene propiedades personalizadas.
+      <div class="hint">Start/End/Paralelos se configuran principalmente por conexiones.</div>
+    </div>
+  }
+</aside>
+

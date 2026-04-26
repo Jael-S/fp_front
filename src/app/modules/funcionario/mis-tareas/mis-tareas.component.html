@@ -1,0 +1,11 @@
+<section class="card">
+  <h2>Mis tareas</h2>
+  <div class="grid">
+    <article class="item" *ngFor="let item of rows()">
+      <strong>{{ item.tramiteId }}</strong>
+      <p>Nodo: {{ item.nodoId }}</p>
+      <small>Estado: {{ item.estado }}</small>
+      <button type="button" (click)="ejecutar(item.id)">Ejecutar</button>
+    </article>
+  </div>
+</section>

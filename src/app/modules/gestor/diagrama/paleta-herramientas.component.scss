@@ -1,0 +1,136 @@
+.paleta {
+  position: sticky;
+  top: 12px;
+  height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(10, 20, 40, 0.08);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px rgba(10, 20, 40, 0.08);
+}
+
+.title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 10px;
+}
+
+.group {
+  display: grid;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(10, 20, 40, 0.06);
+}
+.group:first-of-type {
+  border-top: none;
+}
+
+.tool {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 30, 60, 0.10);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  user-select: none;
+}
+.tool:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(30, 60, 120, 0.12);
+  border-color: rgba(86, 108, 255, 0.35);
+}
+.tool:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.tool.primary {
+  background: linear-gradient(135deg, rgba(86, 108, 255, 0.12), rgba(72, 209, 204, 0.10));
+}
+
+.ico {
+  width: 22px;
+  text-align: center;
+  font-size: 16px;
+}
+.txt {
+  font-weight: 700;
+  color: rgba(10, 20, 40, 0.9);
+}
+
+.issues {
+  margin-top: 12px;
+  border-top: 1px solid rgba(10, 20, 40, 0.06);
+  padding-top: 12px;
+}
+
+.issues-title {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 30, 60, 0.10);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.badge {
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  background: rgba(255, 99, 132, 0.12);
+  color: rgba(140, 0, 40, 0.95);
+  border: 1px solid rgba(255, 99, 132, 0.22);
+}
+.badge-ok {
+  background: rgba(40, 199, 111, 0.12);
+  color: rgba(0, 110, 48, 0.95);
+  border-color: rgba(40, 199, 111, 0.22);
+}
+
+.issue {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 30, 60, 0.10);
+  background: #fff;
+}
+.issue.err {
+  border-color: rgba(255, 99, 132, 0.35);
+  background: rgba(255, 99, 132, 0.06);
+}
+.issue.warn {
+  border-color: rgba(255, 193, 7, 0.35);
+  background: rgba(255, 193, 7, 0.06);
+}
+.issue.ok {
+  border-color: rgba(40, 199, 111, 0.35);
+  background: rgba(40, 199, 111, 0.06);
+  font-weight: 700;
+}
+.lvl {
+  font-weight: 900;
+  font-size: 12px;
+  opacity: 0.85;
+}
+.msg {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.25rem;
+}
+

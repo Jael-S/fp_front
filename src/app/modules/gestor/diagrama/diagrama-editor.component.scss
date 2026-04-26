@@ -1,0 +1,79 @@
+:host {
+  display: block;
+}
+
+.editor {
+  padding: 12px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(10, 20, 40, 0.08);
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px rgba(10, 20, 40, 0.08);
+}
+
+.left .h {
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
+
+.left .sub {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.btn {
+  border-radius: 12px;
+  border: 1px solid rgba(20, 30, 60, 0.14);
+  background: #fff;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 900;
+}
+.btn.primary {
+  border-color: rgba(86, 108, 255, 0.35);
+  background: linear-gradient(135deg, rgba(86, 108, 255, 0.16), rgba(72, 209, 204, 0.12));
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 280px 1fr 360px;
+  gap: 12px;
+  align-items: start;
+}
+
+.right {
+  display: flex;
+  gap: 10px;
+}
+
+.canvas-col {
+  min-width: 0;
+}
+
+/* host para properties panel (bpmn-js) */
+.properties-host {
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: 260px 1fr;
+  }
+  app-panel-propiedades {
+    grid-column: 1 / -1;
+  }
+}

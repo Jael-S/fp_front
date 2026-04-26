@@ -1,0 +1,25 @@
+.canvas-wrap {
+  height: calc(100vh - 24px);
+  border-radius: 16px;
+  border: 1px solid rgba(10, 20, 40, 0.08);
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px rgba(10, 20, 40, 0.08);
+  overflow: hidden;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* bpmn-js base fixes */
+:host ::ng-deep .bjs-container,
+:host ::ng-deep .djs-container {
+  background: transparent !important;
+}
+
+:host ::ng-deep .djs-palette {
+  display: none; /* usamos nuestra paleta propia a la izquierda */
+}
+

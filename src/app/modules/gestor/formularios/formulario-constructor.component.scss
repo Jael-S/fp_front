@@ -1,0 +1,38 @@
+.wrap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1rem;
+}
+
+.panel,
+.builder {
+  background: #15374f;
+  border: 1px solid #2a658e;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fields {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.field-card {
+  border: 1px solid #2f6a93;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.actions {
+  margin: 0.8rem 0;
+  display: flex;
+  gap: 0.5rem;
+}

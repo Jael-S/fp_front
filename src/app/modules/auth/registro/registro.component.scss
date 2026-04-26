@@ -1,0 +1,23 @@
+.auth-card {
+  max-width: 420px;
+  margin: 2rem auto;
+  background: white;
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+input,
+button {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0.65rem;
+}
+
+.error {
+  color: var(--danger);
+}

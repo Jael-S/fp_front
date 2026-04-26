@@ -1,0 +1,7 @@
+<section class="card">
+  <h2>Ejecutar tarea</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <textarea formControlName="observaciones" rows="5" placeholder="Observaciones"></textarea>
+    <button type="submit">Completar tarea</button>
+  </form>
+</section>

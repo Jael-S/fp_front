@@ -1,0 +1,12 @@
+<section class="auth-card">
+  <h2>Registro de empresa</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <input formControlName="nombreEmpresa" placeholder="Empresa" />
+    <input formControlName="nombreAdmin" placeholder="Nombre administrador" />
+    <input formControlName="email" placeholder="Email" />
+    <input formControlName="password" type="password" placeholder="Password" />
+    <button type="submit" [disabled]="loading">Registrar</button>
+    <p class="error" *ngIf="error">{{ error }}</p>
+    <a routerLink="/login">Ya tengo cuenta</a>
+  </form>
+</section>

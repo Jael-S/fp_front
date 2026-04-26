@@ -1,0 +1,27 @@
+.sidebar {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 1rem;
+}
+
+h2 {
+  margin: 0 0 1rem;
+}
+
+nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+a {
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 0.65rem;
+  border-radius: 12px;
+}
+
+a.active,
+a:hover {
+  background: #334155;
+  color: white;
+}

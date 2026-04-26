@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  padding: 1rem;
+}
+
+ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+}

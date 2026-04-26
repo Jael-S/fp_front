@@ -1,0 +1,20 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(79, 70, 229, 0.18), transparent 45%),
+    radial-gradient(circle at 90% 15%, rgba(16, 185, 129, 0.14), transparent 45%),
+    var(--bg-main);
+}
+
+.content {
+  padding: 1rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+}
+
+.page {
+  min-height: calc(100vh - 110px);
+}

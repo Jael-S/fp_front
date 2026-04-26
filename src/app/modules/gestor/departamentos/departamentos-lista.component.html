@@ -1,0 +1,27 @@
+<section class="card">
+  <header>
+    <h2>Departamentos</h2>
+    <button class="btn-primary" type="button" (click)="create()">Crear departamento</button>
+  </header>
+
+  <div class="table-wrap">
+    <table mat-table [dataSource]="rows()">
+    <ng-container matColumnDef="nombre"><th mat-header-cell *matHeaderCellDef>Nombre</th><td mat-cell *matCellDef="let r">{{ r.nombre }}</td></ng-container>
+    <ng-container matColumnDef="descripcion"><th mat-header-cell *matHeaderCellDef>Descripcion</th><td mat-cell *matCellDef="let r">{{ r.descripcion || '-' }}</td></ng-container>
+    <ng-container matColumnDef="responsable"><th mat-header-cell *matHeaderCellDef>Responsable</th><td mat-cell *matCellDef="let r">{{ responsableName(r.responsableId) }}</td></ng-container>
+    <ng-container matColumnDef="usuarios"><th mat-header-cell *matHeaderCellDef>Usuarios</th><td mat-cell *matCellDef="let r">{{ r.cantidadUsuarios }}</td></ng-container>
+    <ng-container matColumnDef="estado"><th mat-header-cell *matHeaderCellDef>Estado</th><td mat-cell *matCellDef="let r">{{ r.activo ? 'Activo' : 'Inactivo' }}</td></ng-container>
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>Acciones</th>
+      <td mat-cell *matCellDef="let r">
+        <button class="btn" type="button" (click)="edit(r)">Editar</button>
+        <button class="btn btn-warn" type="button" (click)="deactivate(r)" [disabled]="!r.activo">Desactivar</button>
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+
+  <mat-paginator [length]="totalItems()" [pageIndex]="page()" [pageSize]="size()" [pageSizeOptions]="[5,10,20]" (page)="onPage($event)" />
+</section>

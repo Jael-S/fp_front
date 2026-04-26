@@ -1,0 +1,6 @@
+<div class="grid">
+  <label *ngFor="let campo of campos()">
+    {{ campo.etiqueta }}
+    <input [type]="campo.tipo === 'NUMERO' ? 'number' : 'text'" />
+  </label>
+</div>

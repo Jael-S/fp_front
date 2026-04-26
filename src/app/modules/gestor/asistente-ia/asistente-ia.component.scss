@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  padding: 1rem;
+}
+
+.chat {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}
+
+.msg {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 0.65rem;
+}
+
+.msg.assistant {
+  background: #f8fafc;
+}
+
+p {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
+}
+
+.row {
+  display: flex;
+  gap: 0.55rem;
+}
+
+input {
+  flex: 1;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0.65rem;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+}

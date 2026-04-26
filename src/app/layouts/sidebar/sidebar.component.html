@@ -1,0 +1,21 @@
+<aside class="sidebar">
+  <h2>FlowPolicy</h2>
+  <nav>
+    <ng-container *ngIf="role() === 'GESTOR_SISTEMA'">
+      <a routerLink="/gestor/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/gestor/usuarios" routerLinkActive="active">Usuarios</a>
+      <a routerLink="/gestor/departamentos" routerLinkActive="active">Departamentos</a>
+      <a routerLink="/gestor/politicas" routerLinkActive="active">Politicas</a>
+    </ng-container>
+
+    <ng-container *ngIf="role() === 'ADMINISTRADOR_AREA'">
+      <a routerLink="/admin-area/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/admin-area/formularios" routerLinkActive="active">Formularios</a>
+    </ng-container>
+
+    <ng-container *ngIf="role() === 'FUNCIONARIO' || role() === 'OPERADOR'">
+      <a routerLink="/funcionario/mis-tareas" routerLinkActive="active">Mis tareas</a>
+      <a routerLink="/funcionario/historial" routerLinkActive="active">Historial</a>
+    </ng-container>
+  </nav>
+</aside>

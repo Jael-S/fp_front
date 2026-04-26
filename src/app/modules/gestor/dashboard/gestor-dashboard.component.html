@@ -1,0 +1,30 @@
+<section class="dashboard-grid">
+  <article class="metric-card">
+    <p>Total tramites</p>
+    <strong>{{ total() }}</strong>
+  </article>
+  <article class="metric-card">
+    <p>Completados</p>
+    <strong>{{ completados() }}</strong>
+  </article>
+  <article class="metric-card">
+    <p>Tramites en curso</p>
+    <strong>{{ enProceso() }}</strong>
+  </article>
+</section>
+
+<section class="panel-grid">
+  <article class="panel chart-panel">
+    <h3>Tramites por estado</h3>
+    <div class="canvas-wrap">
+      <canvas #tramitesChart></canvas>
+    </div>
+  </article>
+
+  <article class="panel">
+    <h3>Actividad reciente</h3>
+    <ul>
+      <li *ngFor="let item of recientes()">{{ item }}</li>
+    </ul>
+  </article>
+</section>

@@ -1,0 +1,38 @@
+<section class="editor">
+  <header class="topbar">
+    <div class="left">
+      <div class="h">Diagramador BPMN</div>
+      <div class="sub" *ngIf="politica() as p">{{ p.nombre }} · v{{ p.version }} · {{ p.estado }}</div>
+    </div>
+    <div class="right">
+      <button class="btn" type="button" (click)="validate()">Validar</button>
+      <button class="btn primary" type="button" (click)="save()" [disabled]="isSaving()">Guardar</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <app-paleta-herramientas
+      [isSaving]="isSaving()"
+      [issues]="issues()"
+      (zoomIn)="zoomIn()"
+      (zoomOut)="zoomOut()"
+      (resetView)="resetView()"
+      (validate)="validate()"
+      (save)="save()"
+      (exportPng)="exportPng()"
+      (exportPdf)="exportPdf()"
+      (autoLayout)="autoLayout()"
+    />
+
+    <div class="canvas-col" #canvasExportHost>
+      <div #propertiesHost class="properties-host" aria-hidden="true"></div>
+      <app-carriles-bpmn [propertiesPanelHost]="propertiesHost"></app-carriles-bpmn>
+    </div>
+
+    <app-panel-propiedades
+      [politicaId]="politicaId() ?? ''"
+      [selected]="selected()"
+      (saved)="onPropsSaved()"
+    />
+  </div>
+</section>

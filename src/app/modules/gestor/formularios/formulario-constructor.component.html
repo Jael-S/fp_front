@@ -1,0 +1,53 @@
+<section class="wrap">
+  <aside class="panel">
+    <h3>Tipos de campo</h3>
+    <button mat-stroked-button *ngFor="let tipo of tipos" (click)="addCampo(tipo)">{{ tipo }}</button>
+  </aside>
+
+  <main class="builder">
+    <h2>Constructor de formularios</h2>
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre del formulario</mat-label>
+      <input matInput [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Nodo ID</mat-label>
+      <input matInput [ngModel]="nodoId()" (ngModelChange)="nodoId.set($event)" />
+    </mat-form-field>
+
+    <div class="fields">
+      <article class="field-card" *ngFor="let campo of campos(); let i = index">
+        <mat-form-field appearance="outline">
+          <mat-label>Etiqueta</mat-label>
+          <input matInput [(ngModel)]="campo.etiqueta" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input matInput [(ngModel)]="campo.nombre" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo</mat-label>
+          <mat-select [(ngModel)]="campo.tipo">
+            <mat-option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-checkbox [(ngModel)]="campo.requerido">Requerido</mat-checkbox>
+        <mat-form-field appearance="outline" *ngIf="campo.tipo === 'SELECCION'">
+          <mat-label>Opciones (coma separadas)</mat-label>
+          <input matInput [ngModel]="campo.opciones.join(',')" (ngModelChange)="campo.opciones = parseOptions($event)" />
+        </mat-form-field>
+        <button mat-button color="warn" (click)="removeCampo(i)">Eliminar</button>
+      </article>
+    </div>
+
+    <div class="actions">
+      <button mat-stroked-button (click)="refresh()">Cargar existentes</button>
+      <button mat-flat-button color="primary" (click)="save()">Guardar formulario</button>
+    </div>
+
+    <h3>Formularios existentes</h3>
+    <ul>
+      <li *ngFor="let f of formularios()">{{ f.nombre }} ({{ f.campos?.length || 0 }} campos)</li>
+    </ul>
+  </main>
+</section>

@@ -1,0 +1,11 @@
+.grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0.55rem;
+}

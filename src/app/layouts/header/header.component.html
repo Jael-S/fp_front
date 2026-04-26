@@ -1,0 +1,11 @@
+<header class="header">
+  <div>
+    <h3>Panel de control</h3>
+    <small>{{ user()?.nombre }} · {{ user()?.rol }}</small>
+  </div>
+
+  <div class="actions">
+    <button mat-icon-button [matBadge]="count" matBadgeColor="warn">🔔</button>
+    <button mat-stroked-button (click)="logout()">Cerrar sesion</button>
+  </div>
+</header>

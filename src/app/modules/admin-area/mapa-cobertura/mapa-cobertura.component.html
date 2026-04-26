@@ -1,0 +1,6 @@
+<section class="card">
+  <h2>Mapa de cobertura (solo lectura)</h2>
+  <ul>
+    <li *ngFor="let p of rows()">{{ p.nombre }} ({{ p.tipo }}) - {{ p.latitud }}, {{ p.longitud }}</li>
+  </ul>
+</section>

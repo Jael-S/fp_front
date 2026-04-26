@@ -1,0 +1,36 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Editar usuario' : 'Crear usuario' }}</h2>
+<mat-dialog-content [formGroup]="form" class="form-grid">
+  <mat-form-field appearance="outline">
+    <mat-label>Nombre</mat-label>
+    <input matInput formControlName="nombre" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Email</mat-label>
+    <input matInput type="email" formControlName="email" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" *ngIf="!isEdit">
+    <mat-label>Password</mat-label>
+    <input matInput type="password" formControlName="password" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Rol</mat-label>
+    <mat-select formControlName="rol">
+      <mat-option *ngFor="let rol of roles" [value]="rol">{{ rol }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Departamento</mat-label>
+    <mat-select formControlName="departamentoId">
+      <mat-option value="">Sin departamento</mat-option>
+      <mat-option *ngFor="let dep of departamentos" [value]="dep.id">{{ dep.nombre }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button class="btn" type="button" mat-dialog-close>Cancelar</button>
+  <button class="btn-primary" type="button" (click)="save()">{{ isEdit ? 'Guardar' : 'Crear' }}</button>
+</mat-dialog-actions>

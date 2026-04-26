@@ -1,0 +1,24 @@
+.form-grid {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 420px;
+}
+
+.btn-primary {
+  border: none;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn {
+  border: 1px solid var(--border-soft);
+  background: white;
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+}

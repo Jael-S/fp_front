@@ -1,0 +1,34 @@
+<section class="card">
+  <header class="top">
+    <h2>Politicas</h2>
+    <button class="btn-primary" type="button" (click)="create()">Nueva politica</button>
+  </header>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Filtrar estado</mat-label>
+    <mat-select [value]="estado()" (selectionChange)="estado.set($event.value); load()">
+      <mat-option value="">Todos</mat-option>
+      <mat-option value="BORRADOR">BORRADOR</mat-option>
+      <mat-option value="ACTIVA">ACTIVA</mat-option>
+      <mat-option value="INACTIVA">INACTIVA</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="policy-grid">
+    <article class="policy-card" *ngFor="let r of rows()">
+      <div class="policy-header">
+        <h3>{{ r.nombre }}</h3>
+        <span class="badge" [class]="'badge ' + r.estado.toLowerCase()">{{ r.estado }}</span>
+      </div>
+      <p>{{ r.descripcion }}</p>
+      <small>Version {{ r.version }}</small>
+      <div class="actions">
+        <button class="btn" type="button" (click)="openDiagram(r)">Abrir diagrama</button>
+        <button class="btn" type="button" (click)="edit(r)">Editar</button>
+        <button class="btn btn-primary-soft" type="button" [disabled]="r.estado !== 'BORRADOR'" (click)="activate(r)">Activar</button>
+        <button class="btn" type="button" [disabled]="r.estado !== 'ACTIVA'" (click)="deactivate(r)">Desactivar</button>
+        <button class="btn btn-warn" type="button" (click)="remove(r)">Eliminar</button>
+      </div>
+    </article>
+  </div>
+</section>

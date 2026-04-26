@@ -1,0 +1,13 @@
+<section class="card">
+  <h2>Asistente IA</h2>
+  <div class="chat">
+    <div *ngFor="let m of messages()" class="msg" [class.assistant]="m.role === 'assistant'">
+      <strong>{{ m.role }}</strong>
+      <p>{{ m.text }}</p>
+    </div>
+  </div>
+  <div class="row">
+    <input [(ngModel)]="input" placeholder="Pregunta al asistente..." />
+    <button type="button" (click)="send()">Enviar</button>
+  </div>
+</section>

@@ -1,0 +1,21 @@
+<h2 mat-dialog-title>{{ data?.politica ? 'Editar politica' : 'Crear politica' }}</h2>
+<mat-dialog-content [formGroup]="form" class="form-grid">
+  <mat-form-field appearance="outline">
+    <mat-label>Nombre</mat-label>
+    <input matInput formControlName="nombre" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Descripcion</mat-label>
+    <textarea matInput rows="3" formControlName="descripcion"></textarea>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Diagrama JSON</mat-label>
+    <textarea matInput rows="5" formControlName="diagramaJson"></textarea>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancelar</button>
+  <button mat-flat-button color="primary" (click)="save()">{{ data?.politica ? 'Guardar' : 'Crear' }}</button>
+</mat-dialog-actions>

@@ -1,0 +1,31 @@
+<div class="dialog">
+  <h2>{{ data?.departamento ? 'Editar departamento' : 'Crear departamento' }}</h2>
+
+  <form [formGroup]="form" class="form-grid">
+    <label>
+      Nombre
+      <input formControlName="nombre" />
+    </label>
+
+    <label>
+      Descripcion
+      <input formControlName="descripcion" />
+    </label>
+
+    <label>
+      Responsable
+      <select formControlName="responsableId">
+        <option value="" disabled>Selecciona un responsable</option>
+        <option *ngFor="let user of admins()" [value]="user.id">{{ user.nombre }} - {{ user.email }}</option>
+      </select>
+      <small class="hint" *ngIf="admins().length === 0">
+        No hay administradores de area disponibles (o ya estan asignados).
+      </small>
+    </label>
+  </form>
+
+  <div class="actions">
+    <button class="btn" type="button" mat-dialog-close>Cancelar</button>
+    <button class="btn-primary" type="button" (click)="save()">{{ data?.departamento ? 'Guardar cambios' : 'Crear departamento' }}</button>
+  </div>
+</div>

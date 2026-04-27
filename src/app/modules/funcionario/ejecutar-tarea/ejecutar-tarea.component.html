@@ -1,7 +1,42 @@
 <section class="card">
   <h2>Ejecutar tarea</h2>
+  <p *ngIf="loading()">Cargando formulario...</p>
+
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <textarea formControlName="observaciones" rows="5" placeholder="Observaciones"></textarea>
-    <button type="submit">Completar tarea</button>
+    <section class="campos" *ngIf="!loading()">
+      <article class="campo" *ngFor="let c of campos()">
+        <label>{{ c.etiqueta }} <span *ngIf="c.requerido">*</span></label>
+
+        <input *ngIf="c.tipo === 'TEXTO'" type="text" [formControlName]="c.nombre" />
+        <input *ngIf="c.tipo === 'NUMERO'" type="number" [formControlName]="c.nombre" />
+        <input *ngIf="c.tipo === 'FECHA'" type="date" [formControlName]="c.nombre" />
+
+        <select *ngIf="c.tipo === 'SELECCION'" [formControlName]="c.nombre">
+          <option value="">Seleccione...</option>
+          <option *ngFor="let op of c.opciones" [value]="op">{{ op }}</option>
+        </select>
+
+        <label class="check" *ngIf="c.tipo === 'CHECKBOX'">
+          <input type="checkbox" [formControlName]="c.nombre" />
+          <span>Marcar</span>
+        </label>
+
+        <input
+          *ngIf="c.tipo === 'ARCHIVO' || c.tipo === 'IMAGEN'"
+          type="file"
+          [attr.accept]="isImage(c) ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx'"
+          [attr.multiple]="false"
+          (change)="onFileSelect(c.nombre, $event)"
+        />
+      </article>
+    </section>
+
+    <label>Observaciones</label>
+    <textarea formControlName="observaciones" rows="4" placeholder="Observaciones (obligatorio para rechazar)"></textarea>
+
+    <div class="actions">
+      <button class="btn-reject" type="button" (click)="rechazar()">Rechazar</button>
+      <button class="btn-complete" type="submit">Completar tarea</button>
+    </div>
   </form>
 </section>

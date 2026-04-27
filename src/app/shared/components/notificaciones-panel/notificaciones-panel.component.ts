@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { Notificacion } from '../../../core/models/notificacion.model';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 
@@ -13,8 +13,18 @@ import { NotificacionService } from '../../../core/services/notificacion.service
 export class NotificacionesPanelComponent {
   private readonly service = inject(NotificacionService);
   readonly rows = signal<Notificacion[]>([]);
+  @Input() items: Notificacion[] | null = null;
+  @Output() readOne = new EventEmitter<string>();
 
   constructor() {
     this.service.list(0, 20).subscribe((res) => this.rows.set(res.items));
+  }
+
+  toRender(): Notificacion[] {
+    return this.items ?? this.rows();
+  }
+
+  mark(item: Notificacion): void {
+    this.readOne.emit(item.id);
   }
 }

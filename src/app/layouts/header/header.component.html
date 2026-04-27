@@ -1,11 +1,22 @@
 <header class="header">
-  <div>
-    <h3>Panel de control</h3>
-    <small>{{ user()?.nombre }} · {{ user()?.rol }}</small>
+  <div class="header-left">
+    <h1 class="logo">FlowPolicy</h1>
   </div>
 
-  <div class="actions">
-    <button mat-icon-button [matBadge]="count" matBadgeColor="warn">🔔</button>
-    <button mat-stroked-button (click)="logout()">Cerrar sesion</button>
+  <div class="header-right">
+    <button class="notificaciones" type="button" (click)="toggleNotificaciones()">
+      <i class="fas fa-bell" aria-hidden="true"></i>
+      <span class="badge" *ngIf="count > 0">{{ count }}</span>
+    </button>
+
+    <div class="usuario">
+      <i class="fas fa-user-circle" aria-hidden="true"></i>
+      <span>{{ user()?.nombre }}</span>
+      <i class="fas fa-chevron-down" aria-hidden="true"></i>
+    </div>
+
+    <button class="logout-btn" type="button" (click)="logout()">
+      <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+    </button>
   </div>
 </header>

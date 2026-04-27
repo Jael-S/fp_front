@@ -1,15 +1,19 @@
 <section class="dashboard-grid">
   <article class="metric-card">
+    <p>Usuarios</p>
+    <strong>{{ totalUsuarios() }}</strong>
+  </article>
+  <article class="metric-card">
+    <p>Departamentos</p>
+    <strong>{{ totalDepartamentos() }}</strong>
+  </article>
+  <article class="metric-card">
+    <p>Politicas</p>
+    <strong>{{ totalPoliticas() }}</strong>
+  </article>
+  <article class="metric-card">
     <p>Total tramites</p>
-    <strong>{{ total() }}</strong>
-  </article>
-  <article class="metric-card">
-    <p>Completados</p>
-    <strong>{{ completados() }}</strong>
-  </article>
-  <article class="metric-card">
-    <p>Tramites en curso</p>
-    <strong>{{ enProceso() }}</strong>
+    <strong>{{ totalTramites() }}</strong>
   </article>
 </section>
 

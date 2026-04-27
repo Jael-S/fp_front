@@ -1,1 +1,161 @@
-<app-tramites-lista />
+<section class="tramites-page p-6">
+  <div class="page-header">
+    <h1>Tramites</h1>
+    <button class="btn-primary" type="button" (click)="openNuevo()">
+      <i class="fas fa-plus" aria-hidden="true"></i>
+      Nuevo Tramite
+    </button>
+  </div>
+
+  <div class="filter-bar">
+    <input type="text" placeholder="Buscar por titulo..." [ngModel]="q()" (ngModelChange)="q.set($event)" />
+    <select [ngModel]="estado()" (ngModelChange)="estado.set($event)">
+      <option value="">Todos los estados</option>
+      <option value="PENDIENTE">Pendiente</option>
+      <option value="EN_PROCESO">En proceso</option>
+      <option value="COMPLETADO">Completado</option>
+      <option value="RECHAZADO">Rechazado</option>
+    </select>
+    <select [ngModel]="prioridad()" (ngModelChange)="prioridad.set($event)">
+      <option value="">Todas las prioridades</option>
+      <option value="ALTA">Alta</option>
+      <option value="MEDIA">Media</option>
+      <option value="BAJA">Baja</option>
+    </select>
+    <select *ngIf="isGestor()" [ngModel]="departamentoFiltro()" (ngModelChange)="departamentoFiltro.set($event)">
+      <option value="">Todas las areas</option>
+      <option *ngFor="let d of departamentos()" [value]="d.id">{{ d.nombre }}</option>
+    </select>
+    <button class="btn-secondary" type="button" (click)="load()">Aplicar filtros</button>
+  </div>
+
+  <div class="data-table" *ngIf="!loading(); else loadingTpl">
+    <table>
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Titulo</th>
+          <th>Departamento</th>
+          <th>Prioridad</th>
+          <th>Fecha limite</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody *ngIf="rows().length > 0; else emptyRowsTpl">
+        <tr *ngFor="let t of rows()">
+          <td>{{ codigoCorto(t.id) }}</td>
+          <td>{{ t.titulo }}</td>
+          <td>{{ deptoNombre(t.departamentoActualId) }}</td>
+          <td><span [class]="priorityClass(t.prioridad)">{{ t.prioridad }}</span></td>
+          <td [class.vencido]="isVencido(t.fechaLimite)">{{ formatoFecha(t.fechaLimite) }}</td>
+          <td><span [class]="statusClass(t.estado)">{{ t.estado }}</span></td>
+          <td class="actions">
+            <button class="btn-link" type="button" title="Ver detalle" (click)="verDetalle(t.id)">
+              <i class="fas fa-eye" aria-hidden="true"></i>
+            </button>
+            <button class="btn-link btn-danger" *ngIf="isGestor()" type="button" title="Dar de baja" (click)="darDeBaja(t.id)">
+              <i class="fas fa-ban" aria-hidden="true"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #emptyRowsTpl>
+    <div class="empty-state">No hay tramites para los filtros seleccionados.</div>
+  </ng-template>
+
+  <ng-template #loadingTpl>
+    <div class="loading">Cargando tramites...</div>
+  </ng-template>
+
+  <section class="modal-overlay" *ngIf="openCreateModal()">
+    <div class="modal-container">
+      <header class="modal-header">
+        <h3>Nuevo Tramite</h3>
+        <button class="btn-close" type="button" (click)="closeNuevo()">X</button>
+      </header>
+      <div class="modal-body">
+        <label class="field">
+          <span>Politica *</span>
+          <select class="control" [ngModel]="formPoliticaId()" (ngModelChange)="formPoliticaId.set($event)">
+            <option value="">Seleccione una politica...</option>
+            <option *ngFor="let p of politicasActivas()" [value]="p.id">{{ p.nombre }}</option>
+          </select>
+          <small class="warning" *ngIf="politicasActivas().length === 0">
+            No hay politicas activas. Active una politica primero.
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Titulo *</span>
+          <input class="control" type="text" [ngModel]="formTitulo()" (ngModelChange)="formTitulo.set($event)" />
+        </label>
+
+        <label class="field">
+          <span>Prioridad</span>
+          <select class="control" [ngModel]="formPrioridad()" (ngModelChange)="formPrioridad.set($event)">
+            <option value="ALTA">Alta</option>
+            <option value="MEDIA">Media</option>
+            <option value="BAJA">Baja</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Fecha limite *</span>
+          <input class="control" type="date" [ngModel]="formFechaLimite()" (ngModelChange)="formFechaLimite.set($event)" />
+        </label>
+
+        <label class="field">
+          <span>Cliente</span>
+          <input class="control" type="text" [ngModel]="formClienteNombre()" (ngModelChange)="formClienteNombre.set($event)" />
+        </label>
+
+        <label class="field">
+          <span>Identidad cliente</span>
+          <input class="control" type="text" [ngModel]="formClienteIdentidad()" (ngModelChange)="formClienteIdentidad.set($event)" />
+        </label>
+
+        <label class="field">
+          <span>Codigo seguimiento (opcional)</span>
+          <input class="control" type="text" [ngModel]="formCodigoSeguimiento()" (ngModelChange)="formCodigoSeguimiento.set($event)" />
+        </label>
+      </div>
+      <footer class="modal-actions">
+        <button class="btn-secondary" type="button" (click)="closeNuevo()">Cancelar</button>
+        <button class="btn-primary" type="button" (click)="crear()" [disabled]="politicasActivas().length === 0">Crear</button>
+      </footer>
+    </div>
+  </section>
+
+  <section class="modal-overlay" *ngIf="openDetailModal()">
+    <div class="modal-container modal-detalle">
+      <header class="modal-header">
+        <h3>Detalle de tramite</h3>
+        <button class="btn-secondary" type="button" (click)="closeDetalle()">Cerrar</button>
+      </header>
+      <div class="modal-body" *ngIf="detalle() as d">
+        <p><strong>Titulo:</strong> {{ d.tramite.titulo }}</p>
+        <p><strong>Estado:</strong> {{ d.tramite.estado }}</p>
+        <p><strong>Prioridad:</strong> {{ d.tramite.prioridad }}</p>
+        <p><strong>Politica:</strong> {{ d.tramite.politicaId }}</p>
+        <p><strong>Departamento actual:</strong> {{ deptoNombre(d.tramite.departamentoActualId) }}</p>
+        <p><strong>Nodo actual:</strong> {{ d.tramite.nodoActualId }}</p>
+        <p><strong>Fecha limite:</strong> {{ formatoFecha(d.tramite.fechaLimite) }}</p>
+        <p><strong>Fecha creacion:</strong> {{ formatoFecha(d.tramite.creadoEn) }}</p>
+        <p><strong>Cliente:</strong> {{ d.tramite.clienteNombre || '-' }}</p>
+        <p><strong>Identidad:</strong> {{ d.tramite.clienteIdentidad || '-' }}</p>
+        <p><strong>Codigo seguimiento:</strong> {{ d.tramite.codigoSeguimiento || '-' }}</p>
+        <h4>Historial</h4>
+        <ul class="historial">
+          <li *ngFor="let h of historialItems()">
+            <span>{{ formatoFecha(h.fecha) }}</span>
+            <span>{{ h.nodoNombre || h.evento }}</span>
+            <span>{{ h.departamentoNombre || '-' }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</section>

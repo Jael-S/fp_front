@@ -1,3 +1,143 @@
 :host {
   display: block;
 }
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.vencido {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.loading {
+  padding: 1.5rem;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: #64748b;
+}
+
+.empty-state {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #ffffff;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.modal-header,
+.modal-container .modal-footer {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-container .modal-footer {
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: none;
+}
+
+.modal-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.field > span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.field .control {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+}
+
+.btn-close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-link {
+  border: none;
+  background: transparent;
+  color: #4f46e5;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.btn-link:hover {
+  background: #eef2ff;
+}
+
+.btn-link.btn-danger {
+  color: #ef4444;
+}
+
+.btn-link.btn-danger:hover {
+  background: #fee2e2;
+}
+
+.modal-detalle {
+  width: min(700px, calc(100vw - 24px));
+}
+
+.historial {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.historial li {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.6rem;
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.warning {
+  color: #ef4444;
+  font-size: 0.8rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

@@ -88,7 +88,14 @@ export class AuthService {
 
   private readPersistedUser(): User | null {
     const raw = localStorage.getItem(this.userKey);
-    return raw ? (JSON.parse(raw) as User) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      localStorage.removeItem(this.userKey);
+      localStorage.removeItem(this.tokenKey);
+      return null;
+    }
   }
 }
 

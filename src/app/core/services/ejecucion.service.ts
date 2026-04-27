@@ -14,6 +14,14 @@ export class EjecucionService {
     return this.http.get<ApiResponse<Ejecucion[]>>(`${this.baseUrl}/pendientes`).pipe(map((r) => r.data));
   }
 
+  misTareas(): Observable<Ejecucion[]> {
+    return this.http.get<ApiResponse<Ejecucion[]>>(`${this.baseUrl}/mis-tareas`).pipe(map((r) => r.data));
+  }
+
+  getById(id: string): Observable<Ejecucion> {
+    return this.http.get<ApiResponse<Ejecucion>>(`${this.baseUrl}/${id}`).pipe(map((r) => r.data));
+  }
+
   iniciar(id: string): Observable<Ejecucion> {
     return this.http.put<ApiResponse<Ejecucion>>(`${this.baseUrl}/${id}/iniciar`, {}).pipe(map((r) => r.data));
   }

@@ -1,53 +1,125 @@
-<section class="wrap">
-  <aside class="panel">
-    <h3>Tipos de campo</h3>
-    <button mat-stroked-button *ngFor="let tipo of tipos" (click)="addCampo(tipo)">{{ tipo }}</button>
-  </aside>
-
-  <main class="builder">
-    <h2>Constructor de formularios</h2>
-    <mat-form-field appearance="outline">
-      <mat-label>Nombre del formulario</mat-label>
-      <input matInput [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Nodo ID</mat-label>
-      <input matInput [ngModel]="nodoId()" (ngModelChange)="nodoId.set($event)" />
-    </mat-form-field>
-
-    <div class="fields">
-      <article class="field-card" *ngFor="let campo of campos(); let i = index">
-        <mat-form-field appearance="outline">
-          <mat-label>Etiqueta</mat-label>
-          <input matInput [(ngModel)]="campo.etiqueta" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Nombre</mat-label>
-          <input matInput [(ngModel)]="campo.nombre" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo</mat-label>
-          <mat-select [(ngModel)]="campo.tipo">
-            <mat-option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-checkbox [(ngModel)]="campo.requerido">Requerido</mat-checkbox>
-        <mat-form-field appearance="outline" *ngIf="campo.tipo === 'SELECCION'">
-          <mat-label>Opciones (coma separadas)</mat-label>
-          <input matInput [ngModel]="campo.opciones.join(',')" (ngModelChange)="campo.opciones = parseOptions($event)" />
-        </mat-form-field>
-        <button mat-button color="warn" (click)="removeCampo(i)">Eliminar</button>
-      </article>
+<section class="formularios-page">
+  <header class="topbar">
+    <div>
+      <h2>{{ isAdmin() ? 'Formularios - Mi area' : 'Formularios' }}</h2>
+      <p *ngIf="isAdmin()">Departamento: {{ departamentoNombre(user()?.departamentoId ?? null) }}</p>
     </div>
+    <button mat-flat-button color="primary" type="button" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      Nuevo
+    </button>
+  </header>
 
-    <div class="actions">
-      <button mat-stroked-button (click)="refresh()">Cargar existentes</button>
-      <button mat-flat-button color="primary" (click)="save()">Guardar formulario</button>
+  <section class="filters">
+    <mat-form-field appearance="outline">
+      <mat-label>Buscar formulario</mat-label>
+      <input matInput [ngModel]="search()" (ngModelChange)="applySearch($event)" />
+    </mat-form-field>
+  </section>
+
+  <section class="cards" *ngIf="!loading(); else loadingTpl">
+    <article class="card" *ngFor="let item of formularios()">
+      <div class="card-title">{{ item.nombre }}</div>
+      <div class="card-meta">
+        <span>Departamento: {{ departamentoNombre(item.departamentoId) }}</span>
+        <span>{{ item.campos.length || 0 }} campos</span>
+      </div>
+      <p class="card-desc">{{ item.descripcion || 'Sin descripcion' }}</p>
+      <div class="card-actions">
+        <button mat-stroked-button type="button" (click)="openEdit(item)">
+          <mat-icon>edit</mat-icon>
+          Editar
+        </button>
+        <button mat-stroked-button type="button" color="warn" (click)="delete(item)">
+          <mat-icon>delete</mat-icon>
+          Eliminar
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <ng-template #loadingTpl>
+    <div class="loading">Cargando formularios...</div>
+  </ng-template>
+
+  <section class="editor-backdrop" *ngIf="editorOpen()">
+    <div class="editor">
+      <header class="editor-head">
+        <h3>{{ editingId() ? 'Editar formulario' : 'Crear formulario' }}</h3>
+        <button mat-icon-button type="button" (click)="cancelEditor()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <div class="editor-body">
+        <div class="editor-form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Descripcion</mat-label>
+            <input matInput [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" *ngIf="isGestor()">
+            <mat-label>Departamento</mat-label>
+            <mat-select [ngModel]="selectedDepartamentoId()" (ngModelChange)="selectedDepartamentoId.set($event)">
+              <mat-option *ngFor="let d of departamentos()" [value]="d.id">{{ d.nombre }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <section class="field-tools">
+          <button mat-stroked-button type="button" *ngFor="let tipo of tipos" (click)="addCampo(tipo)">
+            <mat-icon>add_circle</mat-icon>
+            {{ tipo }}
+          </button>
+        </section>
+
+        <div class="fields" cdkDropList [cdkDropListData]="campos()" (cdkDropListDropped)="reorderCampo($event)">
+          <article class="field-card" *ngFor="let campo of campos(); let i = index" cdkDrag>
+            <div class="field-header">
+              <button mat-icon-button type="button" cdkDragHandle>
+                <mat-icon>drag_indicator</mat-icon>
+              </button>
+              <strong>Campo {{ i + 1 }}</strong>
+              <button mat-icon-button color="warn" type="button" (click)="removeCampo(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+
+            <div class="field-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Etiqueta</mat-label>
+                <input matInput [(ngModel)]="campo.etiqueta" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre tecnico</mat-label>
+                <input matInput [(ngModel)]="campo.nombre" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo</mat-label>
+                <mat-select [(ngModel)]="campo.tipo">
+                  <mat-option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <mat-checkbox [(ngModel)]="campo.requerido">Requerido</mat-checkbox>
+            <mat-form-field appearance="outline" *ngIf="campo.tipo === 'SELECCION'">
+              <mat-label>Opciones (separadas por coma)</mat-label>
+              <input matInput [ngModel]="campo.opciones.join(',')" (ngModelChange)="campo.opciones = parseOptions($event)" />
+            </mat-form-field>
+          </article>
+        </div>
+      </div>
+
+      <footer class="editor-actions">
+        <button mat-stroked-button type="button" (click)="cancelEditor()">Cancelar</button>
+        <button mat-flat-button color="primary" type="button" (click)="save()">Guardar</button>
+      </footer>
     </div>
-
-    <h3>Formularios existentes</h3>
-    <ul>
-      <li *ngFor="let f of formularios()">{{ f.nombre }} ({{ f.campos?.length || 0 }} campos)</li>
-    </ul>
-  </main>
+  </section>
 </section>

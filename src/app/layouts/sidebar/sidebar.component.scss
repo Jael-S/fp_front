@@ -1,27 +1,39 @@
 .sidebar {
-  background: #1e293b;
-  color: #e2e8f0;
+  background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+  color: #eaf2ff;
   padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  min-height: calc(100vh - 2rem);
 }
 
-h2 {
+.logo {
   margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
 }
 
-nav {
+.nav {
   display: grid;
   gap: 0.35rem;
 }
 
 a {
-  color: #cbd5e1;
+  color: #dbeaff;
   text-decoration: none;
   padding: 0.65rem;
   border-radius: 12px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 500;
 }
 
 a.active,
 a:hover {
-  background: #334155;
-  color: white;
+  background: rgba(79, 70, 229, 0.35);
+  border-color: rgba(158, 198, 255, 0.45);
+  color: #ffffff;
 }

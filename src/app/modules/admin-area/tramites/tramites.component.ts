@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { TramitesListaComponent } from '../../gestor/tramites/tramites-lista.component';
+import { TramitesComponent as GestorTramitesComponent } from '../../gestor/tramites/tramites.component';
 
 @Component({
   selector: 'app-admin-tramites',
   standalone: true,
-  imports: [TramitesListaComponent],
+  imports: [GestorTramitesComponent],
   templateUrl: './tramites.component.html',
   styleUrl: './tramites.component.scss',
 })

@@ -1,6 +1,5 @@
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { MatBadgeModule } from '@angular/material/badge';
-import { MatButtonModule } from '@angular/material/button';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificacionService } from '../../core/services/notificacion.service';
@@ -8,7 +7,7 @@ import { NotificacionService } from '../../core/services/notificacion.service';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [MatBadgeModule, MatButtonModule],
+  imports: [CommonModule],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
 })
@@ -20,7 +19,14 @@ export class HeaderComponent {
   count = 0;
 
   constructor() {
-    this.notificacionService.countNoLeidas().subscribe((value) => (this.count = value));
+    this.notificacionService.countNoLeidas().subscribe({
+      next: (value) => (this.count = value),
+      error: () => (this.count = 0),
+    });
+  }
+
+  toggleNotificaciones(): void {
+    this.router.navigate(['/funcionario/historial']);
   }
 
   logout(): void {

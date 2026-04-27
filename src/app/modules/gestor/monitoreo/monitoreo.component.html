@@ -1,4 +1,38 @@
 <section class="card">
-  <h2>Monitoreo en tiempo real</h2>
-  <p>Vista lista para consumir WebSocket.</p>
+  <header class="top">
+    <h2>Monitoreo en tiempo real</h2>
+    <div class="selectors">
+      <select [ngModel]="politicaId()" (ngModelChange)="politicaId.set($event); load()">
+        <option value="">Seleccione politica...</option>
+        <option *ngFor="let p of politicas()" [value]="p.id">{{ p.nombre }}</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="grid" *ngIf="stats() as s; else noData">
+    <article class="stat">
+      <span>Total</span>
+      <strong>{{ s['total'] }}</strong>
+    </article>
+    <article class="stat pending">
+      <span>Pendientes</span>
+      <strong>{{ s['pendientes'] }}</strong>
+    </article>
+    <article class="stat process">
+      <span>En proceso</span>
+      <strong>{{ s['enProceso'] }}</strong>
+    </article>
+    <article class="stat ok">
+      <span>Completados</span>
+      <strong>{{ s['completados'] }}</strong>
+    </article>
+    <article class="stat reject">
+      <span>Rechazados</span>
+      <strong>{{ s['rechazados'] }}</strong>
+    </article>
+  </div>
+
+  <ng-template #noData>
+    <p class="empty">{{ loading() ? 'Cargando monitor...' : 'Seleccione una politica activa para monitorear.' }}</p>
+  </ng-template>
 </section>

@@ -1,25 +1,73 @@
 .header {
-  background: var(--panel-bg);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  box-shadow: var(--shadow-soft);
-  padding: 0.9rem 1.2rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  backdrop-filter: blur(8px);
 }
 
-h3 {
+.logo {
   margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-small {
-  color: var(--text-secondary);
-}
-
-.actions {
+.header-right {
   display: flex;
-  gap: 0.55rem;
   align-items: center;
+  gap: 0.75rem;
+}
+
+.notificaciones,
+.logout-btn {
+  border: none;
+  background: #f8fafc;
+  color: #334155;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.notificaciones:hover,
+.logout-btn:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 0.9rem;
 }

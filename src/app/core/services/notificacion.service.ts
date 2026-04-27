@@ -16,7 +16,7 @@ export class NotificacionService {
   }
 
   countNoLeidas(): Observable<number> {
-    return this.http.get<ApiResponse<{ totalNoLeidas: number }>>(`${this.baseUrl}/no-leidas`).pipe(map((r) => r.data.totalNoLeidas));
+    return this.http.get<ApiResponse<{ totalNoLeidas: number }>>(`${this.baseUrl}/no-leidas/count`).pipe(map((r) => r.data.totalNoLeidas));
   }
 
   read(id: string): Observable<void> {
@@ -25,5 +25,9 @@ export class NotificacionService {
 
   readAll(): Observable<void> {
     return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/leer-todas`, {}).pipe(map(() => void 0));
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<ApiResponse<unknown>>(`${this.baseUrl}/${id}`).pipe(map(() => void 0));
   }
 }

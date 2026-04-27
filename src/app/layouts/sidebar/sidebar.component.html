@@ -1,21 +1,26 @@
 <aside class="sidebar">
-  <h2>FlowPolicy</h2>
-  <nav>
+  <div class="logo">FlowPolicy</div>
+  <nav class="nav">
     <ng-container *ngIf="role() === 'GESTOR_SISTEMA'">
-      <a routerLink="/gestor/dashboard" routerLinkActive="active">Dashboard</a>
-      <a routerLink="/gestor/usuarios" routerLinkActive="active">Usuarios</a>
-      <a routerLink="/gestor/departamentos" routerLinkActive="active">Departamentos</a>
-      <a routerLink="/gestor/politicas" routerLinkActive="active">Politicas</a>
+      <a routerLink="/gestor/dashboard" routerLinkActive="active"><i class="fas fa-tachometer-alt" aria-hidden="true"></i><span>Dashboard</span></a>
+      <a routerLink="/gestor/usuarios" routerLinkActive="active"><i class="fas fa-users" aria-hidden="true"></i><span>Usuarios</span></a>
+      <a routerLink="/gestor/departamentos" routerLinkActive="active"><i class="fas fa-building" aria-hidden="true"></i><span>Departamentos</span></a>
+      <a routerLink="/gestor/politicas" routerLinkActive="active"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Politicas</span></a>
+      <a routerLink="/gestor/formularios" routerLinkActive="active"><i class="fas fa-file-signature" aria-hidden="true"></i><span>Formularios</span></a>
+      <a routerLink="/gestor/tramites" routerLinkActive="active"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Tramites</span></a>
+      <a routerLink="/gestor/monitoreo" routerLinkActive="active"><i class="fas fa-tv" aria-hidden="true"></i><span>Monitoreo</span></a>
     </ng-container>
 
     <ng-container *ngIf="role() === 'ADMINISTRADOR_AREA'">
-      <a routerLink="/admin-area/dashboard" routerLinkActive="active">Dashboard</a>
-      <a routerLink="/admin-area/formularios" routerLinkActive="active">Formularios</a>
+      <a routerLink="/admin-area/dashboard" routerLinkActive="active"><i class="fas fa-tachometer-alt" aria-hidden="true"></i><span>Dashboard</span></a>
+      <a routerLink="/admin-area/formularios" routerLinkActive="active"><i class="fas fa-file-signature" aria-hidden="true"></i><span>Formularios</span></a>
+      <a routerLink="/admin-area/tramites" routerLinkActive="active"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Tramites</span></a>
+      <a routerLink="/admin-area/monitoreo" routerLinkActive="active"><i class="fas fa-tv" aria-hidden="true"></i><span>Monitoreo</span></a>
     </ng-container>
 
     <ng-container *ngIf="role() === 'FUNCIONARIO' || role() === 'OPERADOR'">
-      <a routerLink="/funcionario/mis-tareas" routerLinkActive="active">Mis tareas</a>
-      <a routerLink="/funcionario/historial" routerLinkActive="active">Historial</a>
+      <a routerLink="/funcionario/mis-tareas" routerLinkActive="active"><i class="fas fa-tasks" aria-hidden="true"></i><span>Mis tareas</span></a>
+      <a routerLink="/funcionario/historial" routerLinkActive="active"><i class="fas fa-history" aria-hidden="true"></i><span>Historial</span></a>
     </ng-container>
   </nav>
 </aside>

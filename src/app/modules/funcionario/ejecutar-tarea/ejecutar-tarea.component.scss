@@ -1,19 +1,74 @@
 .card {
   background: white;
-  border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 1rem;
 }
 
 form {
   display: grid;
+  gap: 0.75rem;
+}
+
+label {
+  color: var(--gray-700);
+  font-weight: 500;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+}
+
+.campos {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.campo {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
   gap: 0.6rem;
 }
 
-textarea,
-button {
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  padding: 0.65rem;
+.btn-complete,
+.btn-reject {
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-complete {
+  background: #10b981;
+}
+
+.btn-complete:hover {
+  background: #059669;
+}
+
+.btn-reject {
+  background: #ef4444;
+}
+
+.btn-reject:hover {
+  background: #dc2626;
 }

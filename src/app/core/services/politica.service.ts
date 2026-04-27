@@ -6,6 +6,32 @@ import { ApiResponse } from '../models/api-response.model';
 import { PageResponse } from '../models/page-response.model';
 import { EstadoPolitica, Politica, PoliticaRequest } from '../models/politica.model';
 
+export interface DiagramaNodoRelacion {
+  id: string;
+  elementId: string;
+  tipo: string;
+  texto: string;
+  carrilId?: string | null;
+  carril?: string | null;
+  departamentoId?: string | null;
+  formularioId?: string | null;
+  condiciones?: Array<{ salida: string; destinoId: string }>;
+}
+
+export interface DiagramaTransicionRelacion {
+  id: string;
+  origenId: string;
+  destinoId: string;
+  condicion?: string | null;
+}
+
+export interface DiagramaCompleto {
+  politicaId: string;
+  diagramaXml: string;
+  nodos: DiagramaNodoRelacion[];
+  transiciones: DiagramaTransicionRelacion[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PoliticaService {
   private readonly http = inject(HttpClient);
@@ -39,5 +65,37 @@ export class PoliticaService {
 
   getById(id: string): Observable<Politica> {
     return this.http.get<ApiResponse<Politica>>(`${this.baseUrl}/${id}`).pipe(map((res) => res.data));
+  }
+
+  listActivas(): Observable<Politica[]> {
+    return this.http.get<ApiResponse<Politica[]>>(`${this.baseUrl}/activas`).pipe(map((res) => res.data));
+  }
+
+  guardarDiagramaCompleto(politicaId: string, xml: string): Observable<DiagramaCompleto> {
+    return this.http
+      .put<ApiResponse<DiagramaCompleto>>(`${this.baseUrl}/${politicaId}/diagrama/completo`, { xml })
+      .pipe(map((res) => res.data));
+  }
+
+  obtenerDiagramaCompleto(politicaId: string): Observable<DiagramaCompleto> {
+    return this.http
+      .get<ApiResponse<DiagramaCompleto>>(`${this.baseUrl}/${politicaId}/diagrama/completo`)
+      .pipe(map((res) => res.data));
+  }
+
+  asignarFormularioATarea(politicaId: string, taskId: string, formularioId: string): Observable<void> {
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/${politicaId}/tareas/${taskId}/formulario`, { formularioId })
+      .pipe(map(() => void 0));
+  }
+
+  guardarCondicionesDecision(
+    politicaId: string,
+    gatewayId: string,
+    payload: { texto: string; condiciones: Array<{ salida: string; destinoId: string }> }
+  ): Observable<void> {
+    return this.http
+      .put<ApiResponse<void>>(`${this.baseUrl}/${politicaId}/decisiones/${gatewayId}/condiciones`, payload)
+      .pipe(map(() => void 0));
   }
 }

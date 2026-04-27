@@ -1,0 +1,28 @@
+<section class="seguimiento-page">
+  <div class="card">
+    <h1>Seguimiento de tramite</h1>
+    <p>Ingrese su codigo para consultar el estado actual.</p>
+
+    <div class="row">
+      <input
+        type="text"
+        placeholder="Ej: FP-2026-00001"
+        [ngModel]="codigo()"
+        (ngModelChange)="codigo.set($event)"
+      />
+      <button class="btn-primary" type="button" (click)="consultar()">Consultar</button>
+    </div>
+
+    <p class="error" *ngIf="error()">{{ error() }}</p>
+    <p class="loading" *ngIf="loading()">Consultando seguimiento...</p>
+
+    <div class="result" *ngIf="result() as r">
+      <p><strong>Codigo:</strong> {{ r['codigoSeguimiento'] }}</p>
+      <p><strong>Titulo:</strong> {{ r['titulo'] }}</p>
+      <p><strong>Estado:</strong> {{ r['estado'] }}</p>
+      <p><strong>Nodo actual:</strong> {{ r['nodoActualId'] }}</p>
+      <p><strong>Departamento actual:</strong> {{ r['departamentoActualId'] }}</p>
+      <p><strong>Cliente:</strong> {{ r['clienteNombre'] }}</p>
+    </div>
+  </div>
+</section>

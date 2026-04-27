@@ -1,5 +1,9 @@
 <ul>
-  <li *ngFor="let item of rows()">
-    <strong>{{ item.titulo }}</strong> - {{ item.mensaje }}
+  <li *ngFor="let item of toRender()">
+    <div class="line">
+      <strong>{{ item.titulo }}</strong>
+      <button type="button" *ngIf="!item.leida" (click)="mark(item)">Leer</button>
+    </div>
+    <p>{{ item.mensaje }}</p>
   </li>
 </ul>

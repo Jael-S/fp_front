@@ -1,14 +1,17 @@
 :root {
-  --bg-main: #f1f5f9;
+  --bg-main: #f8fafc;
   --sidebar-bg: #1e293b;
+  --sidebar-bg-soft: #334155;
   --card-bg: #ffffff;
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --primary: #4f46e5;
+  --primary-strong: #4338ca;
+  --primary-soft: #eef2ff;
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
   --border-soft: #e2e8f0;
-  --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --panel-bg: rgba(255, 255, 255, 0.72);
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --panel-bg: #ffffff;
 }

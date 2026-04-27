@@ -3,9 +3,73 @@
 }
 
 .card {
-  background: white;
-  border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  box-shadow: var(--shadow-soft);
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 1rem;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+h2 {
+  margin: 0;
+  color: var(--gray-900);
+}
+
+select {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  background: #fff;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.6rem;
+}
+
+.stat {
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f9fafb;
+}
+
+.stat span {
+  color: var(--gray-500);
+  font-size: 0.82rem;
+}
+
+.stat strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 1.3rem;
+}
+
+.pending {
+  background: #fef3c7;
+}
+
+.process {
+  background: #dbeafe;
+}
+
+.ok {
+  background: #d1fae5;
+}
+
+.reject {
+  background: #fee2e2;
+}
+
+.empty {
+  color: var(--gray-500);
 }

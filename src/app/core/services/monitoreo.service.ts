@@ -7,9 +7,10 @@ import { environment } from '../../../environments/environment';
 export class MonitoreoService {
   private client?: Client;
 
-  connect(topic: string, onMessage: (payload: unknown) => void): void {
+  connect(topic: string, onMessage: (payload: unknown) => void, monitorSocket = true): void {
+    const wsUrl = monitorSocket ? (environment.wsMonitorUrl ?? environment.wsUrl) : environment.wsUrl;
     this.client = new Client({
-      webSocketFactory: () => new SockJS(environment.wsUrl),
+      webSocketFactory: () => new SockJS(wsUrl),
       reconnectDelay: 3000,
       onConnect: () => {
         this.client?.subscribe(topic, (message: IMessage) => {
@@ -23,5 +24,9 @@ export class MonitoreoService {
 
   disconnect(): void {
     this.client?.deactivate();
+  }
+
+  watchPolitica(politicaId: string, onMessage: (payload: unknown) => void): void {
+    this.connect(`/topic/monitor/${politicaId}`, onMessage, true);
   }
 }

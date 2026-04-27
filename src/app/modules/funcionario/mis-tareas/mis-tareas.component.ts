@@ -21,7 +21,7 @@ export class MisTareasComponent {
   }
 
   load(): void {
-    this.service.pendientes().subscribe((data) => this.rows.set(data));
+    this.service.misTareas().subscribe((data) => this.rows.set(data));
   }
 
   ejecutar(id: string): void {

@@ -3,6 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificacionService } from '../../core/services/notificacion.service';
+import { catchError, of, startWith } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -16,14 +17,10 @@ export class HeaderComponent {
   private readonly notificacionService = inject(NotificacionService);
   private readonly router = inject(Router);
   readonly user = computed(() => this.authService.getUser());
-  count = 0;
-
-  constructor() {
-    this.notificacionService.countNoLeidas().subscribe({
-      next: (value) => (this.count = value),
-      error: () => (this.count = 0),
-    });
-  }
+  readonly count$ = this.notificacionService.countNoLeidas().pipe(
+    startWith(0),
+    catchError(() => of(0))
+  );
 
   toggleNotificaciones(): void {
     this.router.navigate(['/funcionario/historial']);

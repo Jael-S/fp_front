@@ -1,8 +1,8 @@
-# fp_frontend
+# FlowPolicy Frontend
 
 > Sistema de Gestión y Automatización de Trámites basado en Políticas de Negocio — Frontend Web
 
-Panel de administración web del sistema **FlowPolicy**, construido con Angular 21. Permite diseñar políticas de negocio mediante diagramas de actividades, gestionar trámites en tiempo real, monitorear el estado de cada proceso y visualizar el mapa de cobertura del servicio.
+Aplicación Angular 21 para el sistema **FlowPolicy**. Incluye diagramador BPMN con swimlanes, constructor de formularios dinámicos, monitoreo en tiempo real por WebSocket, análisis de cuellos de botella y un asistente virtual integrado.
 
 ---
 
@@ -11,220 +11,136 @@ Panel de administración web del sistema **FlowPolicy**, construido con Angular 
 | Tecnología | Versión | Uso |
 |------------|---------|-----|
 | Angular CLI | 21.2.7 | Framework principal |
-| TypeScript | 5.x | Lenguaje principal |
-| Angular Material | 17.x | Componentes UI |
-| SCSS | — | Estilos con variables |
-| @stomp/stompjs | 7.x | WebSockets (STOMP sobre SockJS) |
-| sockjs-client | 1.x | Fallback para WebSockets |
+| TypeScript | 5.9 | Lenguaje principal |
+| Angular Material | 21.x | Componentes UI |
+| bpmn-js | 18.15.0 | Diagramador BPMN (canvas drag & drop) |
+| @stomp/stompjs | 7.x | WebSocket STOMP |
+| sockjs-client | 1.6.x | Fallback WebSocket |
+| FontAwesome | 7.x | Iconografía |
+| Chart.js | 4.x | Gráficos en dashboard |
+| Leaflet.js | 1.9.x | Mapa de cobertura |
+| jsPDF + html2canvas | — | Exportar diagrama a PDF/imagen |
 | jwt-decode | 4.x | Decodificación de JWT en cliente |
-| Leaflet.js | 1.9.x | Mapa de cobertura interactivo |
-| html2canvas | 1.x | Exportar diagrama como imagen |
-| jsPDF | 2.x | Exportar diagrama como PDF |
-| RxJS | 7.x | Programación reactiva |
-| Node.js | 22.19.0 | Entorno de ejecución |
+| Node.js | 22+ | Entorno de ejecución |
 | npm | 11.6.0 | Gestor de paquetes |
 
 ---
 
-## Requisitos previos
+## Instalación y ejecución
 
 ```bash
-node --version     # Node.js 22.19.0+
-npm --version      # npm 11.6.0+
-ng version         # Angular CLI 21.2.7+
-git --version      # Git (cualquier versión reciente)
-```
-
----
-
-## Instalación y ejecución local
-
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/TU_USUARIO/fp_frontend.git
 cd fp_frontend
-```
-
-### 2. Instalar dependencias
-
-```bash
 npm install
+ng serve
+# Aplicación en http://localhost:4200
 ```
 
-### 3. Configurar entorno local
+El backend debe estar corriendo en `http://localhost:8080` y el microservicio IA en `http://localhost:5000`.
 
-Verifica que `src/environments/environment.ts` apunte al backend local:
+### Entorno (`src/environments/environment.ts`)
 
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080',
-  wsUrl: 'http://localhost:8080/ws'
+  apiUrl: 'http://localhost:8080/api/v1',
+  wsUrl:  'http://localhost:8080/ws-monitor'
 };
 ```
 
-### 4. Ejecutar en modo desarrollo
+---
 
-```bash
-ng serve
-# La aplicación inicia en: http://localhost:4200
-```
+## Módulos por rol
 
-> El backend (`fp_backend`) debe estar corriendo en `http://localhost:8080` para que el frontend funcione.
+### GESTOR_SISTEMA — `/gestor/*`
+
+| Módulo | Descripción |
+|--------|-------------|
+| Dashboard | Métricas del sistema |
+| Usuarios | CRUD de usuarios con paginación y filtros |
+| Departamentos | CRUD de departamentos |
+| Políticas | Lista, crear, activar/desactivar |
+| Diagramador BPMN | Canvas bpmn-js con swimlanes, paleta de herramientas, propiedades de nodo, generación con IA (voz o texto) |
+| Formularios | Constructor drag & drop con 7 tipos de campo, generación de campos con IA |
+| Trámites | CRUD de trámites, selección de política activa |
+| Monitoreo | Diagrama con estados en tiempo real (🟢 completado / 🟡 en proceso / 🔴 pendiente) vía WebSocket |
+| Análisis IA | Detección de cuellos de botella por política con nivel de riesgo y sugerencias |
+| Asistente virtual | Chatbot flotante con respuestas sobre cómo usar el sistema |
+
+### ADMINISTRADOR_AREA — `/admin-area/*`
+
+| Módulo | Descripción |
+|--------|-------------|
+| Dashboard | Métricas del área |
+| Formularios | Gestión de formularios del departamento |
+| Trámites | Vista de trámites activos del área |
+| Monitoreo | Estado de procesos del departamento |
+| Mapa de cobertura | Mapa Leaflet del área de servicio |
+
+### FUNCIONARIO — `/funcionario/*`
+
+| Módulo | Descripción |
+|--------|-------------|
+| Mis Tareas | Bandeja de tareas pendientes y en proceso |
+| Ejecutar Tarea | Formulario dinámico con todos los tipos de campo; completar o rechazar |
+| Historial | Tareas completadas/rechazadas |
+
+---
+
+## Tipos de campo en formularios
+
+| Tipo | Componente renderizado |
+|------|----------------------|
+| `TEXTO` | Input text |
+| `NUMERO` | Input number |
+| `FECHA` | Date picker |
+| `SELECCION` | Select / dropdown |
+| `ARCHIVO` | File upload |
+| `IMAGEN` | Image upload con preview |
+| `BOOLEANO` | Checkbox |
 
 ---
 
 ## Estructura del proyecto
 
 ```
-src/
-├── app/
-│   ├── core/                              ← Servicios y lógica global
-│   │   ├── auth/
-│   │   │   ├── auth.guard.ts              ← Protección de rutas
-│   │   │   ├── auth.interceptor.ts        ← Agrega JWT a cada request
-│   │   │   └── role.guard.ts              ← Protección por rol
-│   │   ├── models/                        ← Interfaces TypeScript globales
-│   │   │   ├── api-response.model.ts
-│   │   │   └── user.model.ts
-│   │   └── services/
-│   │       ├── auth.service.ts            ← Login, logout, JWT storage
-│   │       ├── websocket.service.ts       ← Conexión WebSocket global
-│   │       └── notification.service.ts
-│   │
-│   ├── shared/                            ← Componentes reutilizables
-│   │   ├── components/
-│   │   │   ├── navbar/
-│   │   │   ├── sidebar/
-│   │   │   ├── loader/
-│   │   │   └── confirm-dialog/
-│   │   └── pipes/
-│   │
-│   ├── modules/                           ← Módulos por rol
-│   │   ├── gestor/                        ← GESTOR_SISTEMA
-│   │   │   ├── pages/
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── usuarios/              ← CU2: Gestionar Usuarios y Roles
-│   │   │   │   ├── departamentos/         ← CU3: Gestionar Departamentos
-│   │   │   │   ├── politicas/             ← CU4: Gestionar Políticas de Negocio
-│   │   │   │   │   ├── lista/
-│   │   │   │   │   ├── editor-diagrama/   ← CU6: Canvas drag & drop + IA
-│   │   │   │   │   └── monitor/           ← CU9: Verde/amarillo/rojo
-│   │   │   │   ├── tramites/              ← CU7: Gestionar Trámites
-│   │   │   │   ├── analisis-ia/           ← CU11: Análisis con IA
-│   │   │   │   └── mapa/                  ← CU12: Mapa de Cobertura
-│   │   │   ├── models/
-│   │   │   ├── services/
-│   │   │   └── gestor.routes.ts
-│   │   │
-│   │   ├── admin-area/                    ← ADMINISTRADOR_AREA
-│   │   │   ├── pages/
-│   │   │   │   ├── formularios/           ← CU5: Gestionar Formularios del Área
-│   │   │   │   ├── tramites/              ← CU7: Ver trámites del área
-│   │   │   │   ├── monitor/               ← CU9: Monitor de su departamento
-│   │   │   │   └── mapa/                  ← CU12: Ver mapa de cobertura
-│   │   │   ├── models/
-│   │   │   ├── services/
-│   │   │   └── admin-area.routes.ts
-│   │   │
-│   │   └── operador/                      ← OPERADOR
-│   │       ├── pages/
-│   │       │   ├── actividades/           ← CU8: Lista de actividades pendientes
-│   │       │   └── ejecutar-actividad/    ← CU8: Rellenar formulario del nodo
-│   │       ├── models/
-│   │       ├── services/
-│   │       └── operador.routes.ts
-│   │
-│   ├── app.component.ts
-│   ├── app.config.ts
-│   └── app.routes.ts
+src/app/
+├── core/
+│   ├── guards/            ← AuthGuard, RoleGuard
+│   ├── interceptors/      ← JWT interceptor
+│   ├── models/            ← Interfaces TypeScript (politica, usuario, formulario, ia…)
+│   └── services/          ← auth, usuario, departamento, politica, formulario,
+│                             tramite, ejecucion, tarea, monitoreo, ia, websocket
 │
-├── environments/
-│   ├── environment.ts          ← URLs locales
-│   └── environment.prod.ts     ← URLs de Azure
+├── layouts/
+│   ├── main-layout/       ← Shell con sidebar + header (incluye asistente virtual)
+│   ├── sidebar/
+│   └── header/
 │
-└── styles/
-    ├── _variables.scss         ← Paleta de colores y variables
-    └── _reset.scss             ← Reset CSS global
+├── modules/
+│   ├── auth/              ← Login, Registro
+│   ├── gestor/            ← Dashboard, Usuarios, Departamentos, Políticas,
+│   │                         Diagrama, Formularios, Trámites, Monitoreo,
+│   │                         Análisis IA, Asistente IA
+│   ├── admin-area/        ← Dashboard, Formularios, Trámites, Monitoreo, Mapa
+│   └── funcionario/       ← Mis Tareas, Ejecutar Tarea, Historial
+│
+└── shared/
+    └── components/
+        └── asistente-virtual/   ← Chatbot flotante (respuestas predefinidas, sin IA)
 ```
 
 ---
 
-## Paleta de colores
+## Funcionalidades IA (requieren microservicio Python en puerto 5000)
 
-El sistema usa un tema celeste pastel suave, pensado para entornos de gestión formal y lectura prolongada:
-
-| Variable CSS | Color | Uso |
-|-------------|-------|-----|
-| `--primary-100` | `#D6EFFA` | Fondos suaves, hover de tarjetas |
-| `--primary-200` | `#A8D8F0` | Bordes activos, separadores |
-| `--primary-300` | `#72BFE6` | Iconos, texto secundario |
-| `--primary-400` | `#3DA4D8` | Botones secundarios, links |
-| `--primary-500` | `#1A87C0` | Botones primarios, elementos de acción |
-| `--bg-dark` | `#0D2233` | Fondo principal de la app |
-| `--bg-panel` | `#132D42` | Fondo del sidebar y panels |
-| `--bg-card` | `#1A3A52` | Fondo de cards y modales |
-| `--text-primary` | `#EAF6FC` | Texto principal |
-| `--text-muted` | `#90C4DC` | Texto secundario, placeholders |
-| `--success` | `#4DD9AC` | Estado completado — nodo verde monitor |
-| `--danger` | `#F26B6B` | Estado rechazado — nodo rojo monitor |
-| `--warning` | `#F5C842` | Estado en proceso — nodo amarillo monitor |
-| `--info` | `#5BB8E8` | Notificaciones, estado informativo |
-
----
-
-## Módulos y acceso por rol
-
-| Módulo | Rol requerido | Acceso |
-|--------|---------------|--------|
-| `/gestor` | `GESTOR_SISTEMA` | Dashboard, usuarios, departamentos, políticas, editor diagrama, monitor, IA, mapa |
-| `/admin-area` | `ADMINISTRADOR_AREA` | Formularios de su área, trámites, monitor de su departamento, mapa |
-| `/operador` | `OPERADOR` | Lista de actividades pendientes, ejecutar actividad |
-
----
-
-## Variables de entorno
-
-| Archivo | Uso |
-|---------|-----|
-| `environment.ts` | Desarrollo local (`ng serve`) |
-| `environment.prod.ts` | Producción Azure (`ng build --configuration production`) |
-
----
-
-## Despliegue en Azure
-
-```bash
-# Build de producción
-ng build --configuration production
-
-# Deploy en Azure Static Web Apps (con Azure CLI)
-az staticwebapp deploy \
-  --name fp-frontend \
-  --resource-group rg-flowpolicy \
-  --source ./dist/fp-frontend
-```
-
----
-
-## Convención de commits
-
-Este proyecto sigue [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-feat(gestor): agregar página de gestión de departamentos
-fix(auth): corregir redirección post-login según rol
-feat(diagrama): implementar editor drag & drop con generación por IA
-feat(mapa): integrar Leaflet para mapa de cobertura del servicio
-style(sidebar): ajustar responsividad en pantallas medianas
-refactor(politicas): separar lógica del editor en servicio
-chore(deps): actualizar @angular/material
-```
+| Función | Descripción |
+|---------|-------------|
+| Generar diagrama | Describe el proceso en texto o por voz; la IA genera nodos, carriles y XML BPMN |
+| Generar formulario | Describe la tarea; la IA propone campos con tipos y validaciones |
+| Analizar cuellos | El backend Java analiza tiempos reales de ejecución; la UI muestra riesgo ALTO/MEDIO |
 
 ---
 
 ## Licencia
 
-Proyecto académico — Universidad Autónoma Gabriel René Moreno
-Materia: Ingeniería de Software I — Ing. Martínez Canedo
+Proyecto académico — Ingeniería de Software I

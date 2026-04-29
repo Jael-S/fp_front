@@ -12,6 +12,7 @@ import { Departamento } from '../../../core/models/departamento.model';
 import { FormularioService } from '../../../core/services/formulario.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DepartamentoService } from '../../../core/services/departamento.service';
+import { IaService } from '../../../core/services/ia.service';
 import { Campo, CampoTipo, Formulario } from '../../../core/models/formulario.model';
 
 @Component({
@@ -35,6 +36,7 @@ export class FormularioConstructorComponent {
   private readonly formularioService = inject(FormularioService);
   private readonly departamentoService = inject(DepartamentoService);
   private readonly authService = inject(AuthService);
+  private readonly iaService = inject(IaService);
 
   @Input() mode: 'gestor' | 'admin' = 'gestor';
 
@@ -49,6 +51,8 @@ export class FormularioConstructorComponent {
   readonly nombre = signal('');
   readonly descripcion = signal('');
   readonly campos = signal<Campo[]>([]);
+  readonly generandoIA = signal(false);
+  readonly mensajeIA = signal('');
 
   readonly user = computed(() => this.authService.getUser());
   readonly isGestor = computed(() => this.mode === 'gestor');
@@ -139,6 +143,34 @@ export class FormularioConstructorComponent {
     const next = [...this.campos()];
     moveItemInArray(next, event.previousIndex, event.currentIndex);
     this.campos.set(next);
+  }
+
+  generarConIA(): void {
+    const desc = this.descripcion().trim() || this.nombre().trim();
+    if (!desc) {
+      this.mensajeIA.set('Escribe un nombre o descripción del formulario primero.');
+      return;
+    }
+    this.generandoIA.set(true);
+    this.mensajeIA.set('Generando campos con IA...');
+    this.iaService.generarFormulario(desc, this.nombre().trim()).subscribe({
+      next: (res) => {
+        const generados: Campo[] = res.campos.map((c) => ({
+          nombre: c.nombre,
+          etiqueta: c.etiqueta,
+          tipo: c.tipo as CampoTipo,
+          requerido: c.requerido,
+          opciones: c.opciones ?? [],
+        }));
+        this.campos.set(generados);
+        this.mensajeIA.set(`¡${generados.length} campo(s) generados por IA!`);
+        this.generandoIA.set(false);
+      },
+      error: (err) => {
+        this.mensajeIA.set(err?.error?.message ?? 'Error al generar campos con IA.');
+        this.generandoIA.set(false);
+      },
+    });
   }
 
   save(): void {

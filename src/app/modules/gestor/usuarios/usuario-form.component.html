@@ -1,36 +1,48 @@
-<h2 mat-dialog-title>{{ isEdit ? 'Editar usuario' : 'Crear usuario' }}</h2>
-<mat-dialog-content [formGroup]="form" class="form-grid">
-  <mat-form-field appearance="outline">
-    <mat-label>Nombre</mat-label>
-    <input matInput formControlName="nombre" />
-  </mat-form-field>
+<div class="modal-container">
+  <header class="modal-header">
+    <h3>{{ isEdit ? 'Editar usuario' : 'Crear usuario' }}</h3>
+    <button class="btn-close" type="button" mat-dialog-close>
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+  </header>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Email</mat-label>
-    <input matInput type="email" formControlName="email" />
-  </mat-form-field>
+  <div class="modal-body" [formGroup]="form">
+    <div class="form-grid">
+      <div class="field">
+        <label>Nombre *</label>
+        <input type="text" class="control" formControlName="nombre" placeholder="Nombre completo" />
+      </div>
 
-  <mat-form-field appearance="outline" *ngIf="!isEdit">
-    <mat-label>Password</mat-label>
-    <input matInput type="password" formControlName="password" />
-  </mat-form-field>
+      <div class="field">
+        <label>Email *</label>
+        <input type="email" class="control" formControlName="email" placeholder="usuario@email.com" />
+      </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Rol</mat-label>
-    <mat-select formControlName="rol">
-      <mat-option *ngFor="let rol of roles" [value]="rol">{{ rol }}</mat-option>
-    </mat-select>
-  </mat-form-field>
+      <div class="field" *ngIf="!isEdit">
+        <label>Contraseña *</label>
+        <input type="password" class="control" formControlName="password" placeholder="Contraseña segura" />
+      </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Departamento</mat-label>
-    <mat-select formControlName="departamentoId">
-      <mat-option value="">Sin departamento</mat-option>
-      <mat-option *ngFor="let dep of departamentos" [value]="dep.id">{{ dep.nombre }}</mat-option>
-    </mat-select>
-  </mat-form-field>
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button class="btn" type="button" mat-dialog-close>Cancelar</button>
-  <button class="btn-primary" type="button" (click)="save()">{{ isEdit ? 'Guardar' : 'Crear' }}</button>
-</mat-dialog-actions>
+      <div class="field">
+        <label>Rol *</label>
+        <select class="control" formControlName="rol">
+          <option value="">Seleccionar rol...</option>
+          <option *ngFor="let rol of roles" [value]="rol">{{ rol }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Departamento</label>
+        <select class="control" formControlName="departamentoId">
+          <option value="">Sin departamento</option>
+          <option *ngFor="let dep of departamentos" [value]="dep.id">{{ dep.nombre }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <footer class="modal-actions">
+    <button class="btn-cancel" type="button" mat-dialog-close>Cancelar</button>
+    <button class="btn-save" type="button" (click)="save()">{{ isEdit ? 'Guardar' : 'Crear' }}</button>
+  </footer>
+</div>

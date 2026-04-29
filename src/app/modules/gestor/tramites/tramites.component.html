@@ -54,6 +54,12 @@
             <button class="btn-link" type="button" title="Ver detalle" (click)="verDetalle(t.id)">
               <i class="fas fa-eye" aria-hidden="true"></i>
             </button>
+            <button class="btn-link" *ngIf="canManage()" type="button" title="Editar" (click)="editar(t)">
+              <i class="fas fa-pen" aria-hidden="true"></i>
+            </button>
+            <button class="btn-link btn-danger" *ngIf="canManage()" type="button" title="Eliminar" (click)="eliminar(t.id)">
+              <i class="fas fa-trash" aria-hidden="true"></i>
+            </button>
             <button class="btn-link btn-danger" *ngIf="isGestor()" type="button" title="Dar de baja" (click)="darDeBaja(t.id)">
               <i class="fas fa-ban" aria-hidden="true"></i>
             </button>
@@ -73,7 +79,7 @@
   <section class="modal-overlay" *ngIf="openCreateModal()">
     <div class="modal-container">
       <header class="modal-header">
-        <h3>Nuevo Tramite</h3>
+        <h3>{{ editingId() ? 'Editar Tramite' : 'Nuevo Tramite' }}</h3>
         <button class="btn-close" type="button" (click)="closeNuevo()">X</button>
       </header>
       <div class="modal-body">
@@ -122,9 +128,11 @@
           <input class="control" type="text" [ngModel]="formCodigoSeguimiento()" (ngModelChange)="formCodigoSeguimiento.set($event)" />
         </label>
       </div>
-      <footer class="modal-actions">
-        <button class="btn-secondary" type="button" (click)="closeNuevo()">Cancelar</button>
-        <button class="btn-primary" type="button" (click)="crear()" [disabled]="politicasActivas().length === 0">Crear</button>
+      <footer class="modal-footer">
+        <button class="btn-cancel" type="button" (click)="closeNuevo()">Cancelar</button>
+        <button class="btn-save" type="button" (click)="guardarTramite()" [disabled]="politicasActivas().length === 0">
+          {{ editingId() ? 'Guardar cambios' : 'Crear' }}
+        </button>
       </footer>
     </div>
   </section>
@@ -133,15 +141,17 @@
     <div class="modal-container modal-detalle">
       <header class="modal-header">
         <h3>Detalle de tramite</h3>
-        <button class="btn-secondary" type="button" (click)="closeDetalle()">Cerrar</button>
+        <button class="btn-close" type="button" (click)="closeDetalle()">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
       </header>
       <div class="modal-body" *ngIf="detalle() as d">
         <p><strong>Titulo:</strong> {{ d.tramite.titulo }}</p>
         <p><strong>Estado:</strong> {{ d.tramite.estado }}</p>
         <p><strong>Prioridad:</strong> {{ d.tramite.prioridad }}</p>
-        <p><strong>Politica:</strong> {{ d.tramite.politicaId }}</p>
+        <p><strong>Politica:</strong> {{ politicaNombre(d.tramite.politicaId) }}</p>
         <p><strong>Departamento actual:</strong> {{ deptoNombre(d.tramite.departamentoActualId) }}</p>
-        <p><strong>Nodo actual:</strong> {{ d.tramite.nodoActualId }}</p>
+        <p><strong>Nodo actual:</strong> {{ nodoNombre(d.tramite.nodoActualId) }}</p>
         <p><strong>Fecha limite:</strong> {{ formatoFecha(d.tramite.fechaLimite) }}</p>
         <p><strong>Fecha creacion:</strong> {{ formatoFecha(d.tramite.creadoEn) }}</p>
         <p><strong>Cliente:</strong> {{ d.tramite.clienteNombre || '-' }}</p>

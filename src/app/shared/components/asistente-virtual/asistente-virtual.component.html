@@ -1,0 +1,52 @@
+<!-- FAB -->
+<button class="av-fab" (click)="toggle()" title="Asistente FlowPolicy">
+  <i class="fas fa-robot"></i>
+</button>
+
+<!-- Chat flotante -->
+@if (chatAbierto) {
+  <div class="av-wrap">
+
+    <!-- Header -->
+    <div class="av-header">
+      <div class="av-header-title">
+        <i class="fas fa-robot"></i>
+        <span>Asistente FlowPolicy</span>
+      </div>
+      <button class="av-close" (click)="toggle()">✕</button>
+    </div>
+
+    <!-- Mensajes -->
+    <div class="av-body">
+      @for (m of mensajes; track $index) {
+        <div class="av-msg" [class.av-msg--user]="m.esUsuario" [class.av-msg--bot]="!m.esUsuario">
+          <div class="av-bubble">
+            <p>{{ m.texto }}</p>
+            <span class="av-hora">{{ m.hora }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Sugerencias -->
+    <div class="av-sugerencias">
+      @for (s of sugerencias; track s) {
+        <button class="av-chip" (click)="sugerir(s)">{{ s }}</button>
+      }
+    </div>
+
+    <!-- Input -->
+    <div class="av-footer">
+      <input
+        type="text"
+        [(ngModel)]="input"
+        placeholder="Escribe tu pregunta..."
+        (keyup.enter)="enviar()"
+      />
+      <button class="av-send" (click)="enviar()">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+
+  </div>
+}

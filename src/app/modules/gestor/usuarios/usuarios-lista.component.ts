@@ -69,7 +69,10 @@ export class UsuariosListaComponent implements AfterViewInit {
     const ref = this.dialog.open(UsuarioFormComponent, { data: {} });
     ref.afterClosed().subscribe((payload) => {
       if (!payload) return;
-      this.usuarioService.create(payload).subscribe(() => this.load());
+      this.usuarioService.create(payload).subscribe({
+        next: () => { this.page.set(0); this.selectedDepartamento.set(''); this.load(); },
+        error: (err) => window.alert(err?.error?.message ?? 'No se pudo crear el usuario'),
+      });
     });
   }
 
@@ -77,7 +80,10 @@ export class UsuariosListaComponent implements AfterViewInit {
     const ref = this.dialog.open(UsuarioFormComponent, { data: { usuario } });
     ref.afterClosed().subscribe((payload: UsuarioUpdateRequest) => {
       if (!payload) return;
-      this.usuarioService.update(usuario.id, payload).subscribe(() => this.load());
+      this.usuarioService.update(usuario.id, payload).subscribe({
+        next: () => this.load(),
+        error: (err) => window.alert(err?.error?.message ?? 'No se pudo actualizar el usuario'),
+      });
     });
   }
 
@@ -85,10 +91,12 @@ export class UsuariosListaComponent implements AfterViewInit {
     if (usuario.activo) {
       const ok = window.confirm(`Se desactivara ${usuario.nombre}. Deseas continuar?`);
       if (!ok) return;
-      this.usuarioService.deactivate(usuario.id).subscribe(() => this.load());
+      this.usuarioService.deactivate(usuario.id).subscribe({
+        next: () => this.load(),
+        error: (err) => window.alert(err?.error?.message ?? 'No se pudo desactivar el usuario'),
+      });
       return;
     }
-
     const payload: UsuarioUpdateRequest = {
       nombre: usuario.nombre,
       email: usuario.email,
@@ -96,7 +104,10 @@ export class UsuariosListaComponent implements AfterViewInit {
       departamentoId: usuario.departamentoId,
       activo: true,
     };
-    this.usuarioService.update(usuario.id, payload).subscribe(() => this.load());
+    this.usuarioService.update(usuario.id, payload).subscribe({
+      next: () => this.load(),
+      error: (err) => window.alert(err?.error?.message ?? 'No se pudo activar el usuario'),
+    });
   }
 
   depName(id: string | null): string {

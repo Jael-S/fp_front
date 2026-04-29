@@ -1,0 +1,96 @@
+<div class="analisis-wrapper">
+
+  <!-- Cabecera -->
+  <div class="analisis-header">
+    <h2><i class="fas fa-brain"></i> Análisis de Cuellos de Botella</h2>
+    <p class="subtitulo">Detecta qué nodos tardan más en procesarse usando los datos reales de ejecuciones.</p>
+  </div>
+
+  <!-- Controles -->
+  <div class="controles">
+    <select class="politica-select"
+            [ngModel]="politicaId()"
+            (ngModelChange)="politicaId.set($event)">
+      <option value="">— Seleccione política —</option>
+      @for (p of politicas(); track p.id) {
+        <option [value]="p.id">{{ p.nombre }}</option>
+      }
+    </select>
+
+    <button class="btn-analizar"
+            (click)="analizar()"
+            [disabled]="!politicaId() || analizando()">
+      <i class="fas" [class.fa-search]="!analizando()" [class.fa-spinner]="analizando()"
+         [class.fa-spin]="analizando()"></i>
+      {{ analizando() ? 'Analizando...' : 'Analizar' }}
+    </button>
+  </div>
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="error-msg"><i class="fas fa-times-circle"></i> {{ error() }}</div>
+  }
+
+  <!-- Resultados -->
+  @if (resultado(); as r) {
+    <div class="resultados">
+
+      <!-- Resumen global -->
+      <div class="resumen-card">
+        <p class="resumen-texto">{{ r.analisisGeneral }}</p>
+        <span class="chip-tiempo">
+          <i class="fas fa-clock"></i> Promedio global: {{ r.tiempoPromedioGlobalMinutos | number:'1.0-0' }} min
+        </span>
+      </div>
+
+      <!-- Sin cuellos -->
+      @if (r.nodosCriticos.length === 0) {
+        <div class="sin-cuellos">
+          <i class="fas fa-check-circle"></i>
+          <p>No se detectaron cuellos de botella significativos. ¡El flujo está en buen estado!</p>
+        </div>
+      }
+
+      <!-- Nodos críticos -->
+      @if (r.nodosCriticos.length > 0) {
+        <h3>Nodos con demoras detectadas</h3>
+        <div class="nodos-grid">
+          @for (nodo of r.nodosCriticos; track nodo.nodoId) {
+            <div class="nodo-cuello" [class]="colorNivel(nodo.nivelRiesgo)">
+              <div class="nodo-head">
+                <i class="fas" [class]="iconNivel(nodo.nivelRiesgo)"></i>
+                <span class="nodo-nombre">{{ nodo.nombre }}</span>
+                <span class="nivel-badge">{{ nodo.nivelRiesgo }}</span>
+              </div>
+
+              <div class="nodo-stats">
+                <div class="stat">
+                  <span class="stat-label">Tiempo promedio</span>
+                  <span class="stat-value">{{ nodo.tiempoPromedioMinutos | number:'1.0-0' }} min</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Ejecuciones</span>
+                  <span class="stat-value">{{ nodo.tramitesEjecutados }}</span>
+                </div>
+              </div>
+
+              <p class="nodo-sugerencia">
+                <i class="fas fa-lightbulb"></i> {{ nodo.sugerencia }}
+              </p>
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- Estado inicial -->
+  @if (!resultado() && !analizando() && !error()) {
+    <div class="estado-inicial">
+      <i class="fas fa-chart-bar"></i>
+      <p>Selecciona una política y haz clic en <strong>Analizar</strong> para detectar cuellos de botella.</p>
+    </div>
+  }
+
+</div>

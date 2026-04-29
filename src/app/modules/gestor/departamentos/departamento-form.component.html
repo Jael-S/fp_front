@@ -1,31 +1,38 @@
-<div class="dialog">
-  <h2>{{ data.departamento ? 'Editar departamento' : 'Crear departamento' }}</h2>
+<div class="modal-container">
+  <header class="modal-header">
+    <h3>{{ data.departamento ? 'Editar departamento' : 'Crear departamento' }}</h3>
+    <button class="btn-close" type="button" mat-dialog-close>
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+  </header>
 
-  <form [formGroup]="form" class="form-grid">
-    <label>
-      Nombre
-      <input formControlName="nombre" />
-    </label>
+  <div class="modal-body">
+    <form [formGroup]="form" class="form-grid">
+      <div class="field">
+        <label>Nombre *</label>
+        <input type="text" class="control" formControlName="nombre" placeholder="Nombre del departamento" />
+      </div>
 
-    <label>
-      Descripcion
-      <input formControlName="descripcion" />
-    </label>
+      <div class="field">
+        <label>Descripción</label>
+        <textarea class="control textarea" formControlName="descripcion" placeholder="Describe las funciones del departamento" rows="3"></textarea>
+      </div>
 
-    <label>
-      Responsable
-      <select formControlName="responsableId">
-        <option value="" disabled>Selecciona un responsable</option>
-        <option *ngFor="let user of admins()" [value]="user.id">{{ user.nombre }} - {{ user.email }}</option>
-      </select>
-      <small class="hint" *ngIf="admins().length === 0">
-        No hay administradores de area disponibles (o ya estan asignados).
-      </small>
-    </label>
-  </form>
-
-  <div class="actions">
-    <button class="btn" type="button" mat-dialog-close>Cancelar</button>
-    <button class="btn-primary" type="button" (click)="save()">{{ data.departamento ? 'Guardar cambios' : 'Crear departamento' }}</button>
+      <div class="field">
+        <label>Responsable *</label>
+        <select class="control" formControlName="responsableId">
+          <option value="">Selecciona un responsable</option>
+          <option *ngFor="let user of admins()" [value]="user.id">{{ user.nombre }} - {{ user.email }}</option>
+        </select>
+        <small class="hint" *ngIf="admins().length === 0">
+          No hay administradores disponibles (o ya están asignados).
+        </small>
+      </div>
+    </form>
   </div>
+
+  <footer class="modal-actions">
+    <button class="btn-cancel" type="button" mat-dialog-close>Cancelar</button>
+    <button class="btn-save" type="button" (click)="save()">{{ data.departamento ? 'Guardar cambios' : 'Crear departamento' }}</button>
+  </footer>
 </div>

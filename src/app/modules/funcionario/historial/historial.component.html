@@ -1,8 +1,40 @@
 <section class="card">
-  <h2>Historial</h2>
-  <ul>
-    <li *ngFor="let row of rows()">
-      {{ row.id }} - {{ row.estado }}
-    </li>
-  </ul>
+  <h2>Historial de tareas</h2>
+
+  @if (rows().length === 0) {
+    <p class="empty">Aún no has completado ninguna tarea.</p>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Trámite</th>
+            <th>Tarea</th>
+            <th>Departamento</th>
+            <th>Estado</th>
+            <th>Duración</th>
+            <th>Fecha fin</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td class="col-titulo">{{ row.tramiteTitulo || row.tramiteId }}</td>
+              <td>{{ row.nodoNombre || row.nodoId }}</td>
+              <td>{{ row.departamentoNombre || '—' }}</td>
+              <td>
+                <span class="badge"
+                      [class.badge-ok]="row.estado === 'COMPLETADO'"
+                      [class.badge-reject]="row.estado === 'RECHAZADO'">
+                  {{ row.estado }}
+                </span>
+              </td>
+              <td>{{ duracionTexto(row.duracionMs) }}</td>
+              <td>{{ row.finEjecucion ? (row.finEjecucion | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </section>

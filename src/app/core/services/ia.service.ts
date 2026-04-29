@@ -3,16 +3,38 @@ import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
-import { IaResponse } from '../models/ia.model';
+import { IaResponse, GenerarDiagramaResponse, CuelloBotellaResponse, GenerarFormularioResponse } from '../models/ia.model';
 
 @Injectable({ providedIn: 'root' })
 export class IaService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/ia`;
 
+  /** Chat NLP: pregunta al asistente. */
   preguntar(pregunta: string): Observable<IaResponse> {
     return this.http
       .post<ApiResponse<IaResponse>>(`${this.baseUrl}/preguntar`, { pregunta })
-      .pipe(map((response) => response.data));
+      .pipe(map((r) => r.data));
+  }
+
+  /** Genera diagrama BPMN desde descripción en lenguaje natural. */
+  generarDiagrama(descripcion: string): Observable<GenerarDiagramaResponse> {
+    return this.http
+      .post<ApiResponse<GenerarDiagramaResponse>>(`${this.baseUrl}/generar-diagrama`, { descripcion })
+      .pipe(map((r) => r.data));
+  }
+
+  /** Analiza cuellos de botella de una política. */
+  analizarCuellos(politicaId: string): Observable<CuelloBotellaResponse> {
+    return this.http
+      .get<ApiResponse<CuelloBotellaResponse>>(`${this.baseUrl}/analizar-cuellos/${politicaId}`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Genera campos de formulario a partir de la descripción de una tarea. */
+  generarFormulario(descripcion: string, nombreNodo: string): Observable<GenerarFormularioResponse> {
+    return this.http
+      .post<ApiResponse<GenerarFormularioResponse>>(`${this.baseUrl}/generar-formulario`, { descripcion, nombreNodo })
+      .pipe(map((r) => r.data));
   }
 }

@@ -3,6 +3,7 @@
     <h1 class="logo">FlowPolicy</h1>
   </div>
 
+  @let count = (count$ | async) ?? 0;
   <div class="header-right">
     <button class="notificaciones" type="button" (click)="toggleNotificaciones()">
       <i class="fas fa-bell" aria-hidden="true"></i>

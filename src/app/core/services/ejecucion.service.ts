@@ -36,4 +36,8 @@ export class EjecucionService {
   rechazar(id: string, observaciones: string): Observable<Ejecucion> {
     return this.http.put<ApiResponse<Ejecucion>>(`${this.baseUrl}/${id}/rechazar`, { observaciones }).pipe(map((r) => r.data));
   }
+
+  historial(): Observable<Ejecucion[]> {
+    return this.http.get<ApiResponse<Ejecucion[]>>(`${this.baseUrl}/historial`).pipe(map((r) => r.data));
+  }
 }

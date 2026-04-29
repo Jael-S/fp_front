@@ -54,6 +54,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/gestor/diagrama/diagrama-editor.component').then((m) => m.DiagramaEditorComponent),
       },
+      {
+        path: 'asistente-ia',
+        loadComponent: () =>
+          import('./modules/gestor/asistente-ia/asistente-ia.component').then((m) => m.AsistenteIaComponent),
+      },
+      {
+        path: 'analisis-ia',
+        loadComponent: () =>
+          import('./modules/gestor/analisis-ia/analisis-ia.component').then((m) => m.AnalisisIaComponent),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

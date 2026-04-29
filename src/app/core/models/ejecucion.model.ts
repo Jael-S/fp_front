@@ -1,7 +1,11 @@
 export interface Ejecucion {
   id: string;
   tramiteId: string;
+  tramiteTitulo?: string | null;
   nodoId: string;
+  nodoNombre?: string | null;
+  departamentoId?: string | null;
+  departamentoNombre?: string | null;
   usuarioAsignadoId: string;
   estado: 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADO' | 'RECHAZADO';
   inicioEjecucion?: string | null;

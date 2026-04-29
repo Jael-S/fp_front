@@ -1,12 +1,46 @@
-<section class="auth-card">
-  <h2>Registro de empresa</h2>
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <input formControlName="nombreEmpresa" placeholder="Empresa" />
-    <input formControlName="nombreAdmin" placeholder="Nombre administrador" />
-    <input formControlName="email" placeholder="Email" />
-    <input formControlName="password" type="password" placeholder="Password" />
-    <button type="submit" [disabled]="loading">Registrar</button>
-    <p class="error" *ngIf="error">{{ error }}</p>
-    <a routerLink="/login">Ya tengo cuenta</a>
-  </form>
-</section>
+<main class="registro-page">
+  <section class="auth-card">
+    <h1 class="brand-title">Flow<span>Policy</span></h1>
+    <p class="brand-subtitle">AUTOMATIZACION DE PROCESOS</p>
+
+    <div class="auth-tabs">
+      <a routerLink="/login" class="tab-link">Iniciar Sesion</a>
+      <a routerLink="/registro" class="tab-link is-active">Crear Cuenta</a>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <label for="nombreEmpresa">NOMBRE DE EMPRESA</label>
+      <input id="nombreEmpresa" formControlName="nombreEmpresa" type="text" placeholder="Nombre de tu empresa" />
+
+      <label for="nombreAdmin">NOMBRE ADMINISTRADOR</label>
+      <input id="nombreAdmin" formControlName="nombreAdmin" type="text" placeholder="Nombre completo" />
+
+      <label for="email">CORREO ELECTRONICO</label>
+      <input id="email" formControlName="email" type="email" placeholder="tu@correo.com" />
+
+      <label for="password">CONTRASENA</label>
+      <input id="password" formControlName="password" type="password" placeholder="Minimo 6 caracteres" />
+
+      <button type="submit" class="btn-submit" [disabled]="loading">
+        {{ loading ? 'Registrando...' : 'Crear Cuenta' }}
+      </button>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+
+      <div class="divider"><span>o continuar con</span></div>
+
+      <div class="social-row">
+        <button type="button" class="btn-social">
+          <span>G</span>
+          Google
+        </button>
+        <button type="button" class="btn-social">
+          <span>f</span>
+          Microsoft
+        </button>
+      </div>
+
+      <p class="switch-auth">Ya tienes cuenta? <a routerLink="/login">Inicia sesion aqui</a></p>
+    </form>
+  </section>
+</main>

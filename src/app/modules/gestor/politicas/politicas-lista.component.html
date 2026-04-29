@@ -1,18 +1,20 @@
-<section class="card">
-  <header class="top">
-    <h2>Politicas</h2>
-    <button class="btn-primary" type="button" (click)="create()">Crear política</button>
-  </header>
+<section class="politicas-container">
+  <div class="page-header">
+    <h2>Políticas</h2>
+    <button class="btn-primary" type="button" (click)="create()">
+      <i class="fas fa-plus" aria-hidden="true"></i>
+      Crear política
+    </button>
+  </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Filtrar estado</mat-label>
-    <mat-select [value]="estado()" (selectionChange)="estado.set($event.value); load()">
-      <mat-option value="">Todos</mat-option>
-      <mat-option value="BORRADOR">BORRADOR</mat-option>
-      <mat-option value="ACTIVA">ACTIVA</mat-option>
-      <mat-option value="INACTIVA">INACTIVA</mat-option>
-    </mat-select>
-  </mat-form-field>
+  <div class="filter-bar">
+    <select class="filter-select">
+      <option value="">Todos los estados</option>
+      <option value="BORRADOR">Borrador</option>
+      <option value="ACTIVA">Activa</option>
+      <option value="INACTIVA">Inactiva</option>
+    </select>
+  </div>
 
   <div class="policy-grid">
     <article class="policy-card" *ngFor="let r of rows()">
@@ -20,14 +22,29 @@
         <h3>{{ r.nombre }}</h3>
         <span class="badge" [class]="'badge ' + r.estado.toLowerCase()">{{ r.estado }}</span>
       </div>
-      <p>{{ r.descripcion }}</p>
-      <small>Version {{ r.version }}</small>
-      <div class="actions">
-        <button class="btn" type="button" (click)="openDiagram(r)">Abrir diagrama</button>
-        <button class="btn" type="button" (click)="edit(r)">Editar</button>
-        <button class="btn btn-primary-soft" type="button" [disabled]="r.estado !== 'BORRADOR'" (click)="activate(r)">Activar</button>
-        <button class="btn" type="button" [disabled]="r.estado !== 'ACTIVA'" (click)="deactivate(r)">Desactivar</button>
-        <button class="btn btn-warn" type="button" (click)="remove(r)">Eliminar</button>
+      <p class="policy-desc">{{ r.descripcion }}</p>
+      <small class="policy-version">Versión {{ r.version }}</small>
+      <div class="card-actions">
+        <button class="btn-secondary" type="button" (click)="openDiagram(r)">
+          <i class="fas fa-diagram-project" aria-hidden="true"></i>
+          Diagrama
+        </button>
+        <button class="btn-edit" type="button" (click)="edit(r)">
+          <i class="fas fa-edit" aria-hidden="true"></i>
+          Editar
+        </button>
+        <button class="btn-primary" type="button" [disabled]="r.estado !== 'BORRADOR'" (click)="activate(r)">
+          <i class="fas fa-check" aria-hidden="true"></i>
+          Activar
+        </button>
+        <button class="btn-danger" type="button" [disabled]="!puedeDesactivar(r)" (click)="deactivate(r)" [title]="(tramitesPorPolitica().get(r.id) ?? 0) > 0 ? 'Hay trámites pendientes' : 'Desactivar política'">
+          <i class="fas fa-times" aria-hidden="true"></i>
+          Desactivar
+        </button>
+        <button class="btn-delete" type="button" (click)="remove(r)">
+          <i class="fas fa-trash" aria-hidden="true"></i>
+          Eliminar
+        </button>
       </div>
     </article>
   </div>

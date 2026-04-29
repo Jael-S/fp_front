@@ -29,6 +29,8 @@ export class TramitesComponent {
   readonly openCreateModal = signal(false);
   readonly openDetailModal = signal(false);
   readonly detalle = signal<TramiteDetalle | null>(null);
+  readonly politicasMap = signal<Map<string, string>>(new Map());
+  readonly nodosMap = signal<Map<string, string>>(new Map());
 
   readonly q = signal('');
   readonly estado = signal('');
@@ -42,15 +44,25 @@ export class TramitesComponent {
   readonly formClienteNombre = signal('');
   readonly formClienteIdentidad = signal('');
   readonly formCodigoSeguimiento = signal('');
+  readonly editingId = signal<string | null>(null);
 
   readonly user = computed(() => this.authService.getUser());
   readonly isGestor = computed(() => this.mode === 'gestor');
   readonly isAdmin = computed(() => this.mode === 'admin');
+  readonly canManage = computed(() => this.isGestor() || this.isAdmin());
 
   constructor() {
     this.departamentoService.list(0, 200).subscribe({
       next: (res) => this.departamentos.set(res.items),
       error: () => this.departamentos.set([]),
+    });
+    this.tramiteService.listPoliticasActivas().subscribe({
+      next: (rows) => {
+        const map = new Map<string, string>();
+        rows.forEach((p) => map.set(p.id, p.nombre));
+        this.politicasMap.set(map);
+      },
+      error: () => {},
     });
     this.load();
   }
@@ -75,6 +87,7 @@ export class TramitesComponent {
   }
 
   openNuevo(): void {
+    this.editingId.set(null);
     this.openCreateModal.set(true);
     this.formPoliticaId.set('');
     this.formTitulo.set('');
@@ -84,16 +97,22 @@ export class TramitesComponent {
     this.formClienteIdentidad.set('');
     this.formCodigoSeguimiento.set('');
     this.tramiteService.listPoliticasActivas().subscribe({
-      next: (rows) => this.politicasActivas.set(rows),
+      next: (rows) => {
+        this.politicasActivas.set(rows);
+        const map = new Map<string, string>();
+        rows.forEach((p) => map.set(p.id, p.nombre));
+        this.politicasMap.set(map);
+      },
       error: () => this.politicasActivas.set([]),
     });
   }
 
   closeNuevo(): void {
     this.openCreateModal.set(false);
+    this.editingId.set(null);
   }
 
-  crear(): void {
+  guardarTramite(): void {
     if (!this.politicasActivas().length) {
       window.alert('No hay politicas activas. Active una politica primero.');
       return;
@@ -102,7 +121,7 @@ export class TramitesComponent {
       window.alert('Complete politica, titulo y fecha limite.');
       return;
     }
-    this.tramiteService.create({
+    const payload = {
       politicaId: this.formPoliticaId(),
       titulo: this.formTitulo().trim(),
       prioridad: this.formPrioridad(),
@@ -110,12 +129,33 @@ export class TramitesComponent {
       clienteNombre: this.formClienteNombre() || null,
       clienteIdentidad: this.formClienteIdentidad() || null,
       codigoSeguimiento: this.formCodigoSeguimiento() || null,
-    }).subscribe({
+    };
+    const req = this.editingId()
+      ? this.tramiteService.update(this.editingId()!, payload)
+      : this.tramiteService.create(payload);
+    req.subscribe({
       next: () => {
         this.closeNuevo();
         this.load();
       },
-      error: (err) => window.alert(err?.error?.message ?? 'No se pudo crear el tramite'),
+      error: (err) => window.alert(err?.error?.message ?? 'No se pudo guardar el tramite'),
+    });
+  }
+
+  editar(t: Tramite): void {
+    if (!this.canManage()) return;
+    this.editingId.set(t.id);
+    this.openCreateModal.set(true);
+    this.formPoliticaId.set(t.politicaId);
+    this.formTitulo.set(t.titulo);
+    this.formPrioridad.set(t.prioridad);
+    this.formFechaLimite.set(t.fechaLimite ? new Date(t.fechaLimite).toISOString().slice(0, 10) : '');
+    this.formClienteNombre.set(t.clienteNombre ?? '');
+    this.formClienteIdentidad.set(t.clienteIdentidad ?? '');
+    this.formCodigoSeguimiento.set(t.codigoSeguimiento ?? '');
+    this.tramiteService.listPoliticasActivas().subscribe({
+      next: (rows) => this.politicasActivas.set(rows),
+      error: () => this.politicasActivas.set([]),
     });
   }
 
@@ -123,6 +163,18 @@ export class TramitesComponent {
     this.tramiteService.getDetalleCompleto(id).subscribe({
       next: (res) => {
         this.detalle.set(res);
+        // Construir mapa de nodos a partir del historial
+        const nodosMap = new Map<string, string>();
+        res.historial.forEach((h) => {
+          if (h.nodoNombre && res.tramite.nodoActualId === h.nodoNombre.split(' ')[0]) {
+            nodosMap.set(res.tramite.nodoActualId, h.nodoNombre);
+          }
+        });
+        // Si no encontramos el nodo actual en el historial, al menos mostrar su ID
+        if (!nodosMap.has(res.tramite.nodoActualId) && res.tramite.nodoActualId) {
+          nodosMap.set(res.tramite.nodoActualId, res.tramite.nodoActualId);
+        }
+        this.nodosMap.set(nodosMap);
         this.openDetailModal.set(true);
       },
       error: (err) => window.alert(err?.error?.message ?? 'No se pudo cargar el detalle'),
@@ -142,9 +194,28 @@ export class TramitesComponent {
     });
   }
 
+  eliminar(id: string): void {
+    if (!this.canManage()) return;
+    if (!window.confirm('Desea eliminar este tramite?')) return;
+    this.tramiteService.delete(id).subscribe({
+      next: () => this.load(),
+      error: (err) => window.alert(err?.error?.message ?? 'No se pudo eliminar el tramite'),
+    });
+  }
+
   deptoNombre(id: string | null): string {
     if (!id) return '-';
     return this.departamentos().find((d) => d.id === id)?.nombre ?? id;
+  }
+
+  politicaNombre(id: string | null): string {
+    if (!id) return '-';
+    return this.politicasMap().get(id) ?? id;
+  }
+
+  nodoNombre(id: string | null): string {
+    if (!id) return '-';
+    return this.nodosMap().get(id) ?? id;
   }
 
   priorityClass(value: PrioridadTramite): string {

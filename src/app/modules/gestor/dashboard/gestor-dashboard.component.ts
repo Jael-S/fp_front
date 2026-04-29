@@ -58,7 +58,7 @@ export class GestorDashboardComponent implements AfterViewInit, OnDestroy {
       this.pendientes.set(tramites.items.filter((x) => x.estado === 'PENDIENTE').length);
       this.completados.set(tramites.items.filter((x) => x.estado === 'COMPLETADO').length);
       this.enProceso.set(tramites.items.filter((x) => x.estado === 'EN_PROCESO').length);
-      this.recientes.set(tramites.items.slice(0, 5).map((x) => `${x.id.slice(0, 8)} · ${x.estado}`));
+      this.recientes.set(tramites.items.slice(0, 5).map((x) => `${x.titulo} · ${x.estado}`));
       this.renderChart();
     });
   }

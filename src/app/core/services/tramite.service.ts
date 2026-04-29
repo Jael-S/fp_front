@@ -26,6 +26,14 @@ export class TramiteService {
     return this.http.post<ApiResponse<Tramite>>(this.baseUrl, payload).pipe(map((r) => r.data));
   }
 
+  update(id: string, payload: TramiteCreateRequest): Observable<Tramite> {
+    return this.http.put<ApiResponse<Tramite>>(`${this.baseUrl}/${id}`, payload).pipe(map((r) => r.data));
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/${id}`).pipe(map(() => void 0));
+  }
+
   getById(id: string): Observable<TramiteDetalle> {
     return this.http.get<ApiResponse<TramiteDetalle>>(`${this.baseUrl}/${id}`).pipe(map((r) => r.data));
   }

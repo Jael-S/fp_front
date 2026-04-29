@@ -1,5 +1,3 @@
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
 # Compiled output
 /dist
 /tmp
@@ -10,6 +8,8 @@
 /node_modules
 npm-debug.log
 yarn-error.log
+package-lock.json
+yarn.lock
 
 # IDEs and editors
 .idea/
@@ -29,8 +29,12 @@ yarn-error.log
 !.vscode/mcp.json
 .history/*
 
-# Miscellaneous
+# Angular
 /.angular/cache
+/.angular/cli.json
+/.angular/.angular.json
+
+# Miscellaneous
 .sass-cache/
 /connect.lock
 /coverage
@@ -42,3 +46,38 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+*.env
+src/environments/environment.local.ts
+src/environments/environment.prod.ts
+
+# Logs
+*.log
+logs/
+
+# Documentación (excepto README.md)
+*.md
+!README.md
+docs/
+
+# Archivos de respaldo
+*.bak
+*.backup
+*.old
+*.orig
+
+# Compilación
+*.js.map
+*.d.ts
+*.ngfactory.ts
+*.ngsummary.json
+*.ngstyle.ts
+
+# Testing
+coverage/
+test-reports/

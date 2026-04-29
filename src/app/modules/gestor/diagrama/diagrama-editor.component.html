@@ -13,3 +13,153 @@
     <div id="bpmn-canvas"></div>
   </div>
 </div>
+
+<!-- ===== MODAL: SELECCIONAR DEPARTAMENTO PARA CARRIL ===== -->
+<div class="modal-overlay" *ngIf="mostrandoSelectorCarril">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Seleccionar Departamento</h2>
+    </div>
+    <div class="modal-body">
+      <div class="departamentos-grid">
+        <button 
+          type="button"
+          class="dept-btn"
+          *ngFor="let dept of departamentosDisponibles"
+          (click)="seleccionarDepartamento(dept)">
+          {{ dept.nombre }}
+        </button>
+      </div>
+      <div *ngIf="!departamentosDisponibles.length" class="no-items">
+        <p>No hay departamentos disponibles</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="cancelarSelectorCarril()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: EDITAR TAREA (NOMBRE + FORMULARIO) ===== -->
+<div class="modal-overlay" *ngIf="mostrandoModalTarea">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h2>Editar Tarea</h2>
+    </div>
+    <div class="modal-body">
+      <!-- Nombre del nodo -->
+      <div class="form-group">
+        <label>Nombre de la Tarea:</label>
+        <input 
+          type="text" 
+          [(ngModel)]="nombreTarea"
+          placeholder="Ej: Revisar solicitud de crédito"
+          class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label>Departamento</label>
+        <select
+          class="form-select"
+          [(ngModel)]="departamentoSeleccionadoId"
+          (ngModelChange)="onDepartamentoChange()">
+          <option [ngValue]="null">Seleccione...</option>
+          <option *ngFor="let d of departamentos" [ngValue]="d.id">{{ d.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Formulario</label>
+        <select
+          class="form-select"
+          [(ngModel)]="formularioSeleccionadoId"
+          [disabled]="!departamentoSeleccionadoId">
+          <option [ngValue]="null">Seleccione...</option>
+          <option *ngFor="let f of formulariosFiltrados" [ngValue]="f.id">{{ f.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="create-new-form">
+        <button type="button" class="link-btn" (click)="crearNuevoFormulario()">
+          + Crear nuevo formulario
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="cancelarModalTarea()">Cancelar</button>
+      <button type="button" class="btn-primary" (click)="guardarTarea()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: EDITAR DECISIÓN ===== -->
+<div class="modal-overlay" *ngIf="mostrandoModalDecision">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2>Editar Decisión</h2>
+    </div>
+    <div class="modal-body">
+      <!-- Etiqueta del Gateway -->
+      <div class="form-group">
+        <label>Etiqueta de la Decisión:</label>
+        <input 
+          type="text" 
+          [(ngModel)]="decisionEtiqueta"
+          placeholder="Ej: Documento válido?"
+          class="form-input">
+      </div>
+
+      <!-- Tipo de Flujo -->
+      <div class="form-group">
+        <label>Tipo de Flujo:</label>
+        <select [(ngModel)]="tipoFlujo" class="form-select">
+          <option value="SECUENCIAL">Secuencial (una salida)</option>
+          <option value="ALTERNATIVO">Alternativo (Sí/No)</option>
+          <option value="PARALELO">Paralelo (múltiples simultáneas)</option>
+          <option value="ITERATIVO">Iterativo (vuelve atrás)</option>
+        </select>
+      </div>
+
+      <!-- Condiciones de salida -->
+      <div class="form-group">
+        <label>Condiciones de Salida:</label>
+        <div class="condiciones-list">
+          <div class="condicion-item" *ngFor="let cond of decisionCondiciones">
+            <input 
+              type="text" 
+              [(ngModel)]="cond.salida"
+              placeholder="Ej: Sí, No, Pendiente"
+              class="form-input">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="cancelarModalDecision()">Cancelar</button>
+      <button type="button" class="btn-primary" (click)="guardarDecision()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: EDITAR NOMBRE DE NODO ===== -->
+<div class="modal-overlay" *ngIf="mostrandoModalNombre">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>Editar Nombre</h2>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre del Nodo:</label>
+        <input 
+          type="text" 
+          [(ngModel)]="nombreNodo"
+          placeholder="Ingrese nombre"
+          class="form-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="cancelarModalNombre()">Cancelar</button>
+      <button type="button" class="btn-primary" (click)="guardarNombre()">Guardar</button>
+    </div>
+  </div>
+</div>

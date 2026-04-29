@@ -32,6 +32,10 @@ export class FormularioService {
     return this.http.get<ApiResponse<Formulario[]>>(`${this.baseUrl}/politica/${politicaId}`).pipe(map((res) => res.data));
   }
 
+  listarPorDepartamento(departamentoId: string): Observable<Formulario[]> {
+    return this.http.get<ApiResponse<Formulario[]>>(`${this.baseUrl}/departamento/${departamentoId}`).pipe(map((res) => res.data));
+  }
+
   update(id: string, payload: FormularioRequest): Observable<Formulario> {
     return this.http.put<ApiResponse<Formulario>>(`${this.baseUrl}/${id}`, payload).pipe(map((res) => res.data));
   }

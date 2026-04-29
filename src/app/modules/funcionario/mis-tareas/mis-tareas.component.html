@@ -1,11 +1,37 @@
 <section class="card">
-  <h2>Mis tareas</h2>
-  <div class="grid">
-    <article class="item" *ngFor="let item of rows()">
-      <strong>{{ item.tramiteId }}</strong>
-      <p>Nodo: {{ item.nodoId }}</p>
-      <small>Estado: {{ item.estado }}</small>
-      <button type="button" (click)="ejecutar(item.id)">Ejecutar</button>
-    </article>
-  </div>
+  <header class="card-header">
+    <h2>Mis tareas pendientes</h2>
+    <button class="btn-refresh" type="button" (click)="load()">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+  </header>
+
+  @if (rows().length === 0) {
+    <p class="empty">No tienes tareas pendientes.</p>
+  } @else {
+    <div class="grid">
+      @for (item of rows(); track item.id) {
+        <article class="item" [class.en-proceso]="item.estado === 'EN_PROCESO'">
+          <div class="item-header">
+            <span class="titulo">{{ item.tramiteTitulo || item.tramiteId }}</span>
+            <span class="badge" [class.badge-pending]="item.estado === 'PENDIENTE'"
+                                [class.badge-process]="item.estado === 'EN_PROCESO'">
+              {{ item.estado }}
+            </span>
+          </div>
+
+          <div class="item-meta">
+            <p><i class="fas fa-tasks"></i> Tarea: <strong>{{ item.nodoNombre || item.nodoId }}</strong></p>
+            @if (item.departamentoNombre) {
+              <p><i class="fas fa-building"></i> Departamento: {{ item.departamentoNombre }}</p>
+            }
+          </div>
+
+          <button type="button" class="btn-ejecutar" (click)="ejecutar(item.id)">
+            <i class="fas fa-play"></i> Ejecutar tarea
+          </button>
+        </article>
+      }
+    </div>
+  }
 </section>

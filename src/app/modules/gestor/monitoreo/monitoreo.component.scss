@@ -1,75 +1,374 @@
-:host {
-  display: block;
-}
+/* ViewEncapsulation.None → estos estilos son globales (necesario para bpmn-js overlays) */
 
-.card {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+:host { display: block; height: 100%; }
+
+// ─── Wrapper general ───────────────────────────────────────────────────────────
+.monitor-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f8fafc;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
 }
 
-.top {
+// ─── Cabecera ──────────────────────────────────────────────────────────────────
+.monitor-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+
+  i { color: #6366f1; }
+}
+
+.tramite-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  background: #f0fdf4;
+  min-width: 240px;
+  cursor: pointer;
+  &:focus { outline: 2px solid #10b981; }
+}
+
+.politica-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  background: #f8fafc;
+  min-width: 220px;
+  cursor: pointer;
+
+  &:focus { outline: 2px solid #6366f1; }
+}
+
+// ─── Chips de estadísticas ────────────────────────────────────────────────────
+.stats-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+
+  strong { font-size: 0.95rem; }
+
+  &.chip-total   { background: #f1f5f9; color: #334155; }
+  &.chip-pending { background: #fef3c7; color: #92400e; }
+  &.chip-process { background: #dbeafe; color: #1e40af; }
+  &.chip-ok      { background: #d1fae5; color: #065f46; }
+  &.chip-reject  { background: #fee2e2; color: #991b1b; }
+}
+
+// ─── Cuerpo: diagrama + panel ─────────────────────────────────────────────────
+.monitor-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+// ─── Área del diagrama BPMN ───────────────────────────────────────────────────
+.diagram-area {
+  flex: 1;
+  position: relative;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  min-height: 0;
+}
+
+.bpmn-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+// Overlays de bpmn-js (canvas y controles de zoom)
+.bjs-powered-by { display: none; }
+
+.djs-palette { background: #f8fafc !important; }
+
+// ─── Mensaje de overlay (loading / vacío) ─────────────────────────────────────
+.overlay-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(255,255,255,0.85);
+  color: #64748b;
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 10;
+
+  i { font-size: 2rem; }
+  p { margin: 0; }
+}
+
+// ─── Panel lateral ────────────────────────────────────────────────────────────
+.nodes-panel {
+  width: 280px;
+  flex-shrink: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  h3 {
+    margin: 0 0 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+// ─── Tarjeta de nodo activo ───────────────────────────────────────────────────
+.nodo-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: #f8fafc;
+  transition: border-color 0.15s;
+
+  &.en-proceso {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+  }
+
+  &.pendiente {
+    border-left: 4px solid #ef4444;
+    background: #fff5f5;
+  }
+}
+
+.nodo-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.35rem;
 }
 
-h2 {
-  margin: 0;
-  color: var(--gray-900);
+.nodo-nombre {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 170px;
 }
 
-select {
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 0.45rem 0.65rem;
-  background: #fff;
+.nodo-badge {
+  background: #6366f1;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+.nodo-meta {
+  display: flex;
   gap: 0.6rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
 }
 
-.stat {
-  border: 1px solid var(--gray-200);
-  border-radius: 10px;
-  padding: 0.75rem;
-  background: #f9fafb;
+.nodo-tipo {
+  background: #e2e8f0;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
 }
 
-.stat span {
-  color: var(--gray-500);
-  font-size: 0.82rem;
+.nodo-funcionarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
 }
 
-.stat strong {
-  display: block;
-  color: var(--gray-900);
-  font-size: 1.3rem;
-}
-
-.pending {
-  background: #fef3c7;
-}
-
-.process {
+.func-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
   background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
 }
 
-.ok {
-  background: #d1fae5;
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.83rem;
+  color: #475569;
+  margin-bottom: 0.75rem;
+  i { color: #6366f1; }
 }
 
-.reject {
-  background: #fee2e2;
+// ── Historial de ejecuciones del trámite ──────────────────────────────────────
+.historial {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 1rem;
 }
 
-.empty {
-  color: var(--gray-500);
+.hist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  position: relative;
+
+  &:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 22px;
+    bottom: -4px;
+    width: 2px;
+    background: #e2e8f0;
+  }
+}
+
+.hist-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 2px solid #d1d5db;
+  background: #f9fafb;
+
+  .completado  & { background: #10b981; border-color: #10b981; }
+  .en-proceso  & { background: #f59e0b; border-color: #f59e0b; }
+  .rechazado   & { background: #ef4444; border-color: #ef4444; }
+}
+
+.hist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.hist-nodo {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.hist-dur {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.empty-panel {
+  color: #94a3b8;
+  font-size: 0.83rem;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+// ─── Leyenda ──────────────────────────────────────────────────────────────────
+.leyenda {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+
+  h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.78rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.ley-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #334155;
+  margin-bottom: 0.3rem;
+}
+
+.ley-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+
+  &.dot-process { background: #fef3c7; border: 2px solid #f59e0b; }
+  &.dot-pending { background: #fee2e2; border: 2px solid #ef4444; }
+  &.dot-none    { background: #f9fafb; border: 2px solid #d1d5db; }
+}
+
+// ─── Badge de conteo sobre nodos del diagrama (inyectado por bpmn-js overlays) ─
+// IMPORTANTE: debe ser global (ViewEncapsulation.None) porque
+// bpmn-js inserta el HTML del overlay fuera del shadow del componente.
+.bpmn-monitor-badge {
+  background: #6366f1;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+  pointer-events: none;
+  user-select: none;
 }

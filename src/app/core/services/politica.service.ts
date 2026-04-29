@@ -23,6 +23,16 @@ export interface DiagramaTransicionRelacion {
   origenId: string;
   destinoId: string;
   condicion?: string | null;
+  tipo?: string | null;
+  etiqueta?: string | null;
+}
+
+/** Payload al guardar diagrama (elementId BPMN → elementId BPMN) */
+export interface TransicionDiagramaGuardado {
+  nodoOrigenId: string;
+  nodoDestinoId: string;
+  etiqueta: string | null;
+  tipo: string;
 }
 
 export interface DiagramaCompleto {
@@ -71,9 +81,17 @@ export class PoliticaService {
     return this.http.get<ApiResponse<Politica[]>>(`${this.baseUrl}/activas`).pipe(map((res) => res.data));
   }
 
-  guardarDiagramaCompleto(politicaId: string, xml: string): Observable<DiagramaCompleto> {
+  guardarDiagramaCompleto(
+    politicaId: string,
+    xml: string,
+    transiciones?: TransicionDiagramaGuardado[]
+  ): Observable<DiagramaCompleto> {
+    const body: { xml: string; transiciones?: TransicionDiagramaGuardado[] } = { xml };
+    if (transiciones != null && transiciones.length > 0) {
+      body.transiciones = transiciones;
+    }
     return this.http
-      .put<ApiResponse<DiagramaCompleto>>(`${this.baseUrl}/${politicaId}/diagrama/completo`, { xml })
+      .put<ApiResponse<DiagramaCompleto>>(`${this.baseUrl}/${politicaId}/diagrama/completo`, body)
       .pipe(map((res) => res.data));
   }
 

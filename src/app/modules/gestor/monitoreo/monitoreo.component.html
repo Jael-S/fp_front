@@ -1,38 +1,175 @@
-<section class="card">
-  <header class="top">
-    <h2>Monitoreo en tiempo real</h2>
-    <div class="selectors">
-      <select [ngModel]="politicaId()" (ngModelChange)="politicaId.set($event); load()">
-        <option value="">Seleccione politica...</option>
-        <option *ngFor="let p of politicas()" [value]="p.id">{{ p.nombre }}</option>
+<div class="monitor-wrapper">
+
+  <!-- ── Cabecera ── -->
+  <header class="monitor-header">
+    <div class="header-left">
+      <h2 class="titulo"><i class="fas fa-chart-line"></i> Monitoreo en tiempo real</h2>
+
+      <!-- Selector de política -->
+      <select class="politica-select"
+              [ngModel]="politicaSeleccionada()"
+              (ngModelChange)="onPoliticaChange($event)">
+        <option value="">— Seleccione política —</option>
+        @for (p of politicas(); track p.id) {
+          <option [value]="p.id">{{ p.nombre }}</option>
+        }
       </select>
+
+      <!-- Selector de trámite (aparece cuando hay política seleccionada) -->
+      @if (politicaSeleccionada() && tramites().length > 0) {
+        <select class="tramite-select"
+                [ngModel]="tramiteSeleccionado()"
+                (ngModelChange)="onTramiteChange($event)">
+          <option value="">— Ver todos los trámites —</option>
+          @for (t of tramites(); track t.id) {
+            <option [value]="t.id">{{ t.titulo }} ({{ t.estado }})</option>
+          }
+        </select>
+      }
     </div>
+
+    <!-- Chips de estadísticas globales (solo vista política) -->
+    @if (!viendoTramite() && stats(); as s) {
+      <div class="stats-chips">
+        <span class="chip chip-total"><strong>{{ s.total }}</strong> Total</span>
+        <span class="chip chip-pending"><strong>{{ s.pendientes }}</strong> Pendientes</span>
+        <span class="chip chip-process"><strong>{{ s.enProceso }}</strong> En proceso</span>
+        <span class="chip chip-ok"><strong>{{ s.completados }}</strong> Completados</span>
+        <span class="chip chip-reject"><strong>{{ s.rechazados }}</strong> Rechazados</span>
+      </div>
+    }
+
+    <!-- Info resumen del trámite seleccionado -->
+    @if (viendoTramite() && tramiteStats(); as ts) {
+      <div class="stats-chips">
+        <span class="chip chip-total">{{ ts.titulo }}</span>
+        <span class="chip"
+              [class.chip-pending]="ts.estado === 'PENDIENTE'"
+              [class.chip-process]="ts.estado === 'EN_PROCESO'"
+              [class.chip-ok]="ts.estado === 'COMPLETADO'"
+              [class.chip-reject]="ts.estado === 'RECHAZADO'">
+          {{ ts.estado }}
+        </span>
+        @if (ts.nodoActualNombre) {
+          <span class="chip chip-process">
+            <i class="fas fa-map-marker-alt"></i> {{ ts.nodoActualNombre }}
+          </span>
+        }
+        @if (ts.funcionarioActualNombre) {
+          <span class="chip chip-total">
+            <i class="fas fa-user"></i> {{ ts.funcionarioActualNombre }}
+          </span>
+        }
+        <span class="chip chip-total">
+          <i class="fas fa-clock"></i> {{ duracionTexto(ts.tiempoTranscurridoMinutos) }}
+        </span>
+      </div>
+    }
   </header>
 
-  <div class="grid" *ngIf="stats() as s; else noData">
-    <article class="stat">
-      <span>Total</span>
-      <strong>{{ s['total'] }}</strong>
-    </article>
-    <article class="stat pending">
-      <span>Pendientes</span>
-      <strong>{{ s['pendientes'] }}</strong>
-    </article>
-    <article class="stat process">
-      <span>En proceso</span>
-      <strong>{{ s['enProceso'] }}</strong>
-    </article>
-    <article class="stat ok">
-      <span>Completados</span>
-      <strong>{{ s['completados'] }}</strong>
-    </article>
-    <article class="stat reject">
-      <span>Rechazados</span>
-      <strong>{{ s['rechazados'] }}</strong>
-    </article>
-  </div>
+  <!-- ── Cuerpo: diagrama + panel lateral ── -->
+  <div class="monitor-body">
 
-  <ng-template #noData>
-    <p class="empty">{{ loading() ? 'Cargando monitor...' : 'Seleccione una politica activa para monitorear.' }}</p>
-  </ng-template>
-</section>
+    <!-- Diagrama BPMN -->
+    <div class="diagram-area">
+      <div id="bpmn-monitor" class="bpmn-canvas"></div>
+
+      @if (loading()) {
+        <div class="overlay-msg">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Cargando diagrama...</span>
+        </div>
+      }
+      @if (!loading() && !stats()) {
+        <div class="overlay-msg">
+          <i class="fas fa-project-diagram"></i>
+          <p>Seleccione una política activa para monitorear</p>
+        </div>
+      }
+    </div>
+
+    <!-- Panel lateral -->
+    @if (stats()) {
+      <aside class="nodes-panel">
+
+        <!-- Vista trámite específico -->
+        @if (viendoTramite() && tramiteStats(); as ts) {
+          <h3>Progreso del trámite</h3>
+
+          @if (ts.departamentoActualNombre) {
+            <div class="info-row">
+              <i class="fas fa-building"></i>
+              <span>{{ ts.departamentoActualNombre }}</span>
+            </div>
+          }
+
+          <!-- Historial de ejecuciones -->
+          <div class="historial">
+            @for (h of ts.historialEjecuciones; track h.nodoNombre) {
+              <div class="hist-item"
+                   [class.completado]="h.estado === 'COMPLETADO'"
+                   [class.en-proceso]="h.estado === 'EN_PROCESO' || h.estado === 'PENDIENTE'"
+                   [class.rechazado]="h.estado === 'RECHAZADO'">
+                <div class="hist-dot"></div>
+                <div class="hist-info">
+                  <span class="hist-nodo">{{ h.nodoNombre }}</span>
+                  <span class="hist-dur">{{ h.duracionMinutos > 0 ? duracionTexto(h.duracionMinutos) : '—' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Leyenda trámite -->
+          <div class="leyenda">
+            <h4>Leyenda</h4>
+            <div class="ley-item"><span class="ley-dot" style="background:#d1fae5;border-color:#10b981"></span> Completado</div>
+            <div class="ley-item"><span class="ley-dot" style="background:#fef3c7;border-color:#f59e0b"></span> En proceso</div>
+            <div class="ley-item"><span class="ley-dot" style="background:#dbeafe;border-color:#3b82f6"></span> Pendiente</div>
+            <div class="ley-item"><span class="ley-dot" style="background:#f9fafb;border-color:#d1d5db"></span> No alcanzado</div>
+          </div>
+        }
+
+        <!-- Vista general política -->
+        @if (!viendoTramite()) {
+          <h3>Nodos activos</h3>
+
+          @if (nodosActivos().length > 0) {
+            @for (nodo of nodosActivos(); track nodo.elementId) {
+              <div class="nodo-card"
+                   [class.en-proceso]="nodo.estado === 'EN_PROCESO'"
+                   [class.pendiente]="nodo.estado === 'PENDIENTE'">
+                <div class="nodo-header">
+                  <span class="nodo-nombre">{{ nodo.nombre }}</span>
+                  <span class="nodo-badge">{{ nodo.tramitesActivos }}</span>
+                </div>
+                <div class="nodo-meta">
+                  <span><i class="fas fa-clock"></i> {{ nodo.tiempoPromedioMin }} min</span>
+                  <span class="nodo-tipo">{{ nodo.tipo }}</span>
+                </div>
+                @if (nodo.funcionarios.length) {
+                  <div class="nodo-funcionarios">
+                    @for (f of nodo.funcionarios; track f) {
+                      <span class="func-tag"><i class="fas fa-user"></i> {{ f }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          } @else {
+            <p class="empty-panel">No hay trámites activos en este momento.</p>
+          }
+
+          <!-- Leyenda general -->
+          <div class="leyenda">
+            <h4>Leyenda</h4>
+            <div class="ley-item"><span class="ley-dot dot-process"></span> En proceso</div>
+            <div class="ley-item"><span class="ley-dot dot-pending"></span> Pendiente</div>
+            <div class="ley-item"><span class="ley-dot dot-none"></span> Sin trámites</div>
+          </div>
+        }
+
+      </aside>
+    }
+
+  </div>
+</div>

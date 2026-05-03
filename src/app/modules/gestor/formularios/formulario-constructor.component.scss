@@ -438,6 +438,65 @@
   gap: 8px;
 }
 
+.tabla-config {
+  grid-template-columns: 120px 120px !important;
+}
+
+.tabla-headers {
+  display: grid;
+  gap: 6px;
+
+  > label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+}
+
+.tabla-headers-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  input {
+    width: 120px;
+  }
+}
+
+.tabla-preview {
+  overflow-x: auto;
+
+  > label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    display: block;
+    margin-bottom: 6px;
+  }
+}
+
+.preview-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+
+  th, td {
+    border: 1px solid #e2e8f0;
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  th {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  td {
+    color: #94a3b8;
+  }
+}
+
 .editor-actions {
   padding: 16px 20px;
   border-top: 1px solid #e2e8f0;

@@ -91,15 +91,6 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
     if (!this.politicaId) {
       this.router.navigate(['/gestor/politicas']);
       return;
-    setTimeout(() => {
-  const svg = document.querySelector('#bpmn-canvas svg');
-  if (svg) {
-    const connectionsGroup = svg.querySelector('.djs-group[data-group-id="connections"]');
-    if (connectionsGroup) {
-      svg.appendChild(connectionsGroup);
-    }
-  }
-  }, 1000);
     }
   
     this.initModeler();
@@ -340,12 +331,12 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
       // Guardar relación en backend
       if (this.politicaId) {
         try {
-          await this.tareaService.guardarRelacionCarril(this.politicaId, {
+          await firstValueFrom(this.tareaService.guardarRelacionCarril(this.politicaId, {
             carrilId,
             carrilNombre,
             departamentoId: dept.id,
             departamentoNombre: dept.nombre
-          }).toPromise();
+          }));
           console.log('Relación carril-departamento guardada en backend');
         } catch (error) {
           console.error('Error al guardar relación carril-departamento:', error);
@@ -386,6 +377,14 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
     this.formularioSeleccionadoId = null;
     this.formulariosFiltrados = [];
 
+    // Cargar todos los formularios disponibles
+    try {
+      const allForms = await firstValueFrom(this.formularioService.list());
+      this.formulariosFiltrados = Array.isArray(allForms) ? allForms : [];
+    } catch {
+      this.formulariosFiltrados = this.formularios.length ? this.formularios : [];
+    }
+
     if (this.politicaId) {
       try {
         const nodo = await firstValueFrom(
@@ -393,14 +392,6 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
         );
         if (nodo?.departamentoId) {
           this.departamentoSeleccionadoId = nodo.departamentoId;
-          try {
-            const list = await firstValueFrom(
-              this.formularioService.listarPorDepartamento(nodo.departamentoId)
-            );
-            this.formulariosFiltrados = Array.isArray(list) ? list : [];
-          } catch {
-            this.formulariosFiltrados = [];
-          }
         }
         if (nodo?.formularioId) {
           this.formularioSeleccionadoId = nodo.formularioId;
@@ -418,19 +409,14 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
     if (resetFormulario) {
       this.formularioSeleccionadoId = null;
     }
-    if (!this.departamentoSeleccionadoId) {
-      this.formulariosFiltrados = [];
-      this.cdr.detectChanges();
-      return;
-    }
-    this.formularioService.listarPorDepartamento(this.departamentoSeleccionadoId).subscribe({
+    // Recargar todos los formularios (sin filtrar por departamento)
+    this.formularioService.list().subscribe({
       next: (formularios) => {
         this.formulariosFiltrados = Array.isArray(formularios) ? formularios : [];
         this.cdr.detectChanges();
       },
       error: () => {
-        this.formulariosFiltrados = [];
-        this.mostrarMensaje('No se pudieron cargar los formularios del departamento', true);
+        this.formulariosFiltrados = this.formularios.length ? this.formularios : [];
         this.cdr.detectChanges();
       },
     });
@@ -497,10 +483,6 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   cancelarModalFormulario(): void {
-    this.cerrarModalTarea();
-  }
-
-  private cerrarModalFormulario(): void {
     this.cerrarModalTarea();
   }
 
@@ -621,9 +603,8 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private obtenerCarrilDeTarea(taskElement: any): any {
+  private obtenerCarrilDeTarea(taskElement: any): any { // eslint-disable-line @typescript-eslint/no-unused-vars
     try {
-      // Buscar el parent lane del elemento
       let parent = taskElement?.parent;
       while (parent) {
         if (parent.type === 'bpmn:Lane' || parent.type === 'bpmn:Participant') {
@@ -635,14 +616,6 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
     } catch {
       return null;
     }
-  }
-
-  /**
-   * Obtener el nombre del carril (para compatibilidad con código antiguo)
-   */
-  private obtenerNombreCarril(taskElement: any): string | null {
-    const carril = this.obtenerCarrilDeTarea(taskElement);
-    return carril?.businessObject?.name || null;
   }
 
   // ===== OPERACIONES ESTÁNDAR =====
@@ -705,7 +678,7 @@ export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
 
       const transiciones = this.extraerTransicionesDelModelo();
       this.politicaService.guardarDiagramaCompleto(politica.id, xml, transiciones).subscribe({
-        next: (updated) => {
+        next: (_updated) => {
           this.politica = { ...politica, diagramaJson: xml };
           this.isSaving = false;
           window.alert('Diagrama guardado');

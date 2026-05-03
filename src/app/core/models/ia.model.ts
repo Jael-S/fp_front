@@ -31,6 +31,9 @@ export interface CampoIa {
   requerido: boolean;
   esCampoPrioridad: boolean;
   opciones: string[];
+  filasTabla?: number;
+  columnasTabla?: number;
+  columnasNombres?: string[];
 }
 
 export interface GenerarFormularioResponse {

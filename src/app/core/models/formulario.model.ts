@@ -1,4 +1,15 @@
-export type CampoTipo = 'TEXTO' | 'NUMERO' | 'FECHA' | 'SELECCION' | 'CHECKBOX' | 'ARCHIVO' | 'IMAGEN';
+export type CampoTipo =
+  | 'TEXTO'
+  | 'AREA_TEXTO'
+  | 'ETIQUETA'
+  | 'NUMERO'
+  | 'FECHA'
+  | 'SELECCION'
+  | 'RADIO'
+  | 'CHECKBOX'
+  | 'ARCHIVO'
+  | 'IMAGEN'
+  | 'TABLA';
 
 export interface Campo {
   nombre: string;
@@ -7,6 +18,12 @@ export interface Campo {
   requerido: boolean;
   opciones: string[];
   aceptaMultiples?: boolean;
+  /** Solo para TABLA: número de filas */
+  filasTabla?: number;
+  /** Solo para TABLA: número de columnas */
+  columnasTabla?: number;
+  /** Solo para TABLA: nombres de las columnas */
+  columnasNombres?: string[];
 }
 
 export interface Formulario {

@@ -49,7 +49,7 @@
       </header>
 
       <div class="editor-body">
-      <div class="editor-form-grid">
+        <div class="editor-form-grid">
           <div class="field">
             <label>Nombre</label>
             <input type="text" class="control" [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
@@ -79,20 +79,22 @@
           }
         </div>
 
+        <!-- Botones para agregar campos por tipo -->
         <section class="field-tools">
-          <button type="button" *ngFor="let tipo of tipos" (click)="addCampo(tipo)">
+          <button type="button" *ngFor="let t of tiposOpciones" (click)="addCampo(t.value)">
             <i class="fas fa-plus-circle" aria-hidden="true"></i>
-            {{ tipo }}
+            {{ t.label }}
           </button>
         </section>
 
+        <!-- Lista de campos con drag-and-drop -->
         <div class="fields" cdkDropList [cdkDropListData]="campos()" (cdkDropListDropped)="reorderCampo($event)">
           <article class="field-card" *ngFor="let campo of campos(); let i = index" cdkDrag>
             <div class="field-header">
               <button type="button" cdkDragHandle class="btn-drag">
                 <i class="fas fa-grip-vertical" aria-hidden="true"></i>
               </button>
-              <strong>Campo {{ i + 1 }}</strong>
+              <strong>Campo {{ i + 1 }} — <em>{{ labelDeTipo(campo.tipo) }}</em></strong>
               <button class="btn-delete-field" type="button" (click)="removeCampo(i)">
                 <i class="fas fa-trash" aria-hidden="true"></i>
               </button>
@@ -110,20 +112,73 @@
               <div class="field">
                 <label>Tipo</label>
                 <select class="control" [(ngModel)]="campo.tipo">
-                  <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</option>
+                  <option *ngFor="let t of tiposOpciones" [value]="t.value">{{ t.label }}</option>
                 </select>
               </div>
             </div>
 
-            <div class="field-checkbox">
+            <!-- Requerido (no aplica a ETIQUETA) -->
+            <div class="field-checkbox" *ngIf="campo.tipo !== 'ETIQUETA'">
               <input type="checkbox" id="requerido-{{ i }}" [(ngModel)]="campo.requerido" />
               <label for="requerido-{{ i }}">Requerido</label>
             </div>
-            
-            <div class="field" *ngIf="campo.tipo === 'SELECCION'">
+
+            <!-- Opciones para SELECCION y RADIO -->
+            <div class="field" *ngIf="campo.tipo === 'SELECCION' || campo.tipo === 'RADIO'">
               <label>Opciones (separadas por coma)</label>
-              <input type="text" class="control" [ngModel]="campo.opciones.join(',')" (ngModelChange)="campo.opciones = parseOptions($event)" />
+              <input type="text" class="control"
+                [ngModel]="campo.opciones.join(',')"
+                (ngModelChange)="campo.opciones = parseOptions($event)" />
             </div>
+
+            <!-- Configuración de TABLA -->
+            <ng-container *ngIf="campo.tipo === 'TABLA'">
+              <div class="field-grid tabla-config">
+                <div class="field">
+                  <label>Filas</label>
+                  <input type="number" class="control" min="1" max="20"
+                    [(ngModel)]="campo.filasTabla" />
+                </div>
+                <div class="field">
+                  <label>Columnas</label>
+                  <input type="number" class="control" min="1" max="10"
+                    [(ngModel)]="campo.columnasTabla" />
+                </div>
+              </div>
+
+              <div class="tabla-headers" *ngIf="(campo.columnasTabla ?? 0) > 0">
+                <label>Nombres de columnas</label>
+                <div class="tabla-headers-grid">
+                  <input
+                    *ngFor="let idx of rangeArray(campo.columnasTabla)"
+                    type="text"
+                    class="control"
+                    [placeholder]="'Columna ' + (idx + 1)"
+                    [ngModel]="getColumnaHeader(campo, idx)"
+                    (ngModelChange)="setColumnaHeader(campo, idx, $event)"
+                  />
+                </div>
+              </div>
+
+              <!-- Vista previa de la tabla -->
+              <div class="tabla-preview" *ngIf="(campo.filasTabla ?? 0) > 0 && (campo.columnasTabla ?? 0) > 0">
+                <label>Vista previa</label>
+                <table class="preview-table">
+                  <thead>
+                    <tr>
+                      <th *ngFor="let ci of rangeArray(campo.columnasTabla)">
+                        {{ getColumnaHeader(campo, ci) }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let ri of rangeArray(campo.filasTabla)">
+                      <td *ngFor="let ci of rangeArray(campo.columnasTabla)">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
           </article>
         </div>
       </div>

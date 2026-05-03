@@ -15,6 +15,11 @@ import { DepartamentoService } from '../../../core/services/departamento.service
 import { IaService } from '../../../core/services/ia.service';
 import { Campo, CampoTipo, Formulario } from '../../../core/models/formulario.model';
 
+interface TipoOpcion {
+  value: CampoTipo;
+  label: string;
+}
+
 @Component({
   selector: 'app-formulario-constructor',
   standalone: true,
@@ -40,7 +45,22 @@ export class FormularioConstructorComponent {
 
   @Input() mode: 'gestor' | 'admin' = 'gestor';
 
-  readonly tipos: CampoTipo[] = ['TEXTO', 'NUMERO', 'FECHA', 'SELECCION', 'ARCHIVO', 'IMAGEN'];
+  readonly tiposOpciones: TipoOpcion[] = [
+    { value: 'TEXTO',      label: 'Texto corto' },
+    { value: 'AREA_TEXTO', label: 'Área de texto' },
+    { value: 'ETIQUETA',   label: 'Etiqueta (solo texto)' },
+    { value: 'NUMERO',     label: 'Número' },
+    { value: 'FECHA',      label: 'Fecha' },
+    { value: 'SELECCION',  label: 'Selector desplegable' },
+    { value: 'RADIO',      label: 'Botones de opción (Radio)' },
+    { value: 'CHECKBOX',   label: 'Casilla (Checkbox)' },
+    { value: 'ARCHIVO',    label: 'Archivo' },
+    { value: 'IMAGEN',     label: 'Imagen' },
+    { value: 'TABLA',      label: 'Tabla/Grid' },
+  ];
+
+  readonly tipos: CampoTipo[] = this.tiposOpciones.map((t) => t.value);
+
   readonly formularios = signal<Formulario[]>([]);
   readonly departamentos = signal<Departamento[]>([]);
   readonly loading = signal(false);
@@ -121,7 +141,15 @@ export class FormularioConstructorComponent {
     this.nombre.set(item.nombre);
     this.descripcion.set(item.descripcion ?? '');
     this.selectedDepartamentoId.set(item.departamentoId ?? this.resolveDepartamentoEditor());
-    this.campos.set((item.campos ?? []).map((campo) => ({ ...campo, opciones: campo.opciones ?? [] })));
+    this.campos.set(
+      (item.campos ?? []).map((campo) => ({
+        ...campo,
+        opciones: campo.opciones ?? [],
+        filasTabla: campo.filasTabla ?? 3,
+        columnasTabla: campo.columnasTabla ?? 3,
+        columnasNombres: campo.columnasNombres ?? [],
+      }))
+    );
   }
 
   cancelEditor(): void {
@@ -131,7 +159,16 @@ export class FormularioConstructorComponent {
   addCampo(tipo: CampoTipo): void {
     this.campos.update((prev) => [
       ...prev,
-      { nombre: `campo_${prev.length + 1}`, etiqueta: 'Nuevo campo', tipo, requerido: false, opciones: [] },
+      {
+        nombre: `campo_${prev.length + 1}`,
+        etiqueta: 'Nuevo campo',
+        tipo,
+        requerido: false,
+        opciones: [],
+        filasTabla: tipo === 'TABLA' ? 3 : undefined,
+        columnasTabla: tipo === 'TABLA' ? 3 : undefined,
+        columnasNombres: tipo === 'TABLA' ? [] : undefined,
+      },
     ]);
   }
 
@@ -161,6 +198,9 @@ export class FormularioConstructorComponent {
           tipo: c.tipo as CampoTipo,
           requerido: c.requerido,
           opciones: c.opciones ?? [],
+          filasTabla: c.filasTabla,
+          columnasTabla: c.columnasTabla,
+          columnasNombres: c.columnasNombres,
         }));
         this.campos.set(generados);
         this.mensajeIA.set(`¡${generados.length} campo(s) generados por IA!`);
@@ -221,11 +261,29 @@ export class FormularioConstructorComponent {
     return this.departamentos().find((d) => d.id === id)?.nombre ?? id;
   }
 
+  labelDeTipo(tipo: CampoTipo): string {
+    return this.tiposOpciones.find((t) => t.value === tipo)?.label ?? tipo;
+  }
+
   parseOptions(value: string): string[] {
     return (value || '')
       .split(',')
       .map((x) => x.trim())
       .filter((x) => x.length > 0);
+  }
+
+  getColumnaHeader(campo: Campo, i: number): string {
+    return campo.columnasNombres?.[i] ?? `Col ${i + 1}`;
+  }
+
+  setColumnaHeader(campo: Campo, i: number, value: string): void {
+    const nombres = [...(campo.columnasNombres ?? [])];
+    nombres[i] = value;
+    campo.columnasNombres = nombres;
+  }
+
+  rangeArray(n: number | undefined): number[] {
+    return Array.from({ length: n ?? 0 }, (_, i) => i);
   }
 
   private resolveDepartamentoEditor(): string {

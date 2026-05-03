@@ -1,42 +1,231 @@
-<section class="card">
-  <h2>Ejecutar tarea</h2>
-  <p *ngIf="loading()">Cargando formulario...</p>
+<section class="tarea-page">
 
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <section class="campos" *ngIf="!loading()">
-      <article class="campo" *ngFor="let c of campos()">
-        <label>{{ c.etiqueta }} <span *ngIf="c.requerido">*</span></label>
-
-        <input *ngIf="c.tipo === 'TEXTO'" type="text" [formControlName]="c.nombre" />
-        <input *ngIf="c.tipo === 'NUMERO'" type="number" [formControlName]="c.nombre" />
-        <input *ngIf="c.tipo === 'FECHA'" type="date" [formControlName]="c.nombre" />
-
-        <select *ngIf="c.tipo === 'SELECCION'" [formControlName]="c.nombre">
-          <option value="">Seleccione...</option>
-          <option *ngFor="let op of c.opciones" [value]="op">{{ op }}</option>
-        </select>
-
-        <label class="check" *ngIf="c.tipo === 'CHECKBOX'">
-          <input type="checkbox" [formControlName]="c.nombre" />
-          <span>Marcar</span>
-        </label>
-
-        <input
-          *ngIf="c.tipo === 'ARCHIVO' || c.tipo === 'IMAGEN'"
-          type="file"
-          [attr.accept]="isImage(c) ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx'"
-          [attr.multiple]="false"
-          (change)="onFileSelect(c.nombre, $event)"
-        />
-      </article>
-    </section>
-
-    <label>Observaciones</label>
-    <textarea formControlName="observaciones" rows="4" placeholder="Observaciones (obligatorio para rechazar)"></textarea>
-
-    <div class="actions">
-      <button class="btn-reject" type="button" (click)="rechazar()">Rechazar</button>
-      <button class="btn-complete" type="submit">Completar tarea</button>
+  <!-- Cabecera de la tarea -->
+  <header class="tarea-header">
+    <div class="tarea-header-info">
+      <h2>Ejecutar tarea</h2>
+      @if (ejecucion()) {
+        <span class="tarea-meta">
+          Trámite: <strong>{{ ejecucion()!.tramiteTitulo ?? ejecucion()!.tramiteId }}</strong>
+          &nbsp;·&nbsp; Nodo: <strong>{{ ejecucion()!.nodoNombre ?? '—' }}</strong>
+        </span>
+      }
     </div>
-  </form>
+    @if (ejecucion()?.estado) {
+      <span class="estado-badge" [class]="'estado-' + ejecucion()!.estado.toLowerCase()">
+        {{ ejecucion()!.estado }}
+      </span>
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="loading-card">
+      <span class="spinner"></span>
+      Cargando formulario...
+    </div>
+  }
+
+  @if (!loading()) {
+
+    <!-- Banner sin formulario -->
+    @if (errorMsg() === 'sin_formulario') {
+      <div class="info-banner">
+        <i class="fas fa-info-circle"></i>
+        Esta tarea no requiere formulario. Puedes completarla directamente.
+      </div>
+    } @else if (errorMsg()) {
+      <div class="error-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ errorMsg() }}
+      </div>
+    }
+
+    <!-- Error de submit -->
+    @if (submitError()) {
+      <div class="error-banner">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ submitError() }}
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+
+      <!-- Campos del formulario -->
+      @if (campos().length > 0) {
+        <div class="form-card">
+          <div class="form-card-header">
+            <i class="fas fa-file-alt"></i>
+            <span>{{ formulario()?.nombre ?? 'Datos del formulario' }}</span>
+          </div>
+
+          <div class="campos-grid">
+            @for (c of campos(); track c.nombre) {
+              <div class="campo-item" [class.campo-full]="c.tipo === 'AREA_TEXTO' || c.tipo === 'TABLA' || c.tipo === 'ETIQUETA'">
+
+                @if (c.tipo === 'ETIQUETA') {
+                  <div class="campo-etiqueta">{{ c.etiqueta }}</div>
+                } @else {
+
+                  <label class="campo-label">
+                    {{ c.etiqueta }}
+                    @if (c.requerido && c.tipo !== 'CHECKBOX') {
+                      <span class="req">*</span>
+                    }
+                  </label>
+
+                  @if (c.tipo === 'TEXTO') {
+                    <input
+                      type="text"
+                      class="campo-control"
+                      [class.is-invalid]="isInvalid(c.nombre)"
+                      [formControlName]="c.nombre"
+                      [placeholder]="c.etiqueta"
+                    />
+                  }
+                  @if (c.tipo === 'AREA_TEXTO') {
+                    <textarea
+                      class="campo-control"
+                      [class.is-invalid]="isInvalid(c.nombre)"
+                      [formControlName]="c.nombre"
+                      rows="3"
+                      [placeholder]="c.etiqueta"
+                    ></textarea>
+                  }
+                  @if (c.tipo === 'NUMERO') {
+                    <input
+                      type="number"
+                      class="campo-control"
+                      [class.is-invalid]="isInvalid(c.nombre)"
+                      [formControlName]="c.nombre"
+                      [placeholder]="c.etiqueta"
+                    />
+                  }
+                  @if (c.tipo === 'FECHA') {
+                    <input
+                      type="date"
+                      class="campo-control"
+                      [class.is-invalid]="isInvalid(c.nombre)"
+                      [formControlName]="c.nombre"
+                    />
+                  }
+                  @if (c.tipo === 'SELECCION') {
+                    <select
+                      class="campo-control"
+                      [class.is-invalid]="isInvalid(c.nombre)"
+                      [formControlName]="c.nombre"
+                    >
+                      <option value="">Seleccione una opción...</option>
+                      @for (op of c.opciones; track op) {
+                        <option [value]="op">{{ op }}</option>
+                      }
+                    </select>
+                  }
+                  @if (c.tipo === 'RADIO') {
+                    <div class="radio-group" [class.is-invalid]="isInvalid(c.nombre)">
+                      @for (op of c.opciones; track op) {
+                        <label class="radio-option">
+                          <input type="radio" [formControlName]="c.nombre" [value]="op" />
+                          <span>{{ op }}</span>
+                        </label>
+                      }
+                    </div>
+                  }
+                  @if (c.tipo === 'CHECKBOX') {
+                    <label class="checkbox-option">
+                      <input type="checkbox" [formControlName]="c.nombre" />
+                      <span>{{ c.etiqueta }}</span>
+                    </label>
+                  }
+                  @if (c.tipo === 'ARCHIVO' || c.tipo === 'IMAGEN') {
+                    <div class="file-upload-area" [class.is-invalid]="isInvalid(c.nombre)">
+                      <i class="fas" [class]="isImage(c) ? 'fa-image' : 'fa-file-upload'"></i>
+                      <span>{{ isImage(c) ? 'Seleccionar imagen' : 'Seleccionar archivo' }}</span>
+                      <input
+                        type="file"
+                        [attr.accept]="isImage(c) ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx'"
+                        (change)="onFileSelect(c.nombre, $event)"
+                      />
+                    </div>
+                    @if (files()[c.nombre]?.length) {
+                      <span class="file-name">
+                        <i class="fas fa-check-circle"></i>
+                        {{ files()[c.nombre][0].name }}
+                      </span>
+                    }
+                  }
+                  @if (c.tipo === 'TABLA') {
+                    <div class="tabla-wrapper">
+                      <table class="tabla-grid">
+                        <thead>
+                          <tr>
+                            @for (ci of rangeArray(c.columnasTabla); track ci) {
+                              <th>{{ getColumnaHeader(c, ci) }}</th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (ri of rangeArray(c.filasTabla); track ri) {
+                            <tr>
+                              @for (ci of rangeArray(c.columnasTabla); track ci) {
+                                <td>
+                                  <input
+                                    type="text"
+                                    class="cell-input"
+                                    [value]="getGridCell(c.nombre, ri, ci)"
+                                    (input)="setGridCell(c.nombre, ri, ci, $any($event.target).value)"
+                                  />
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+
+                  <!-- Mensaje de error de campo -->
+                  @if (isInvalid(c.nombre)) {
+                    <span class="campo-error">Este campo es obligatorio</span>
+                  }
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Observaciones -->
+      <div class="form-card obs-card">
+        <div class="form-card-header">
+          <i class="fas fa-comment-alt"></i>
+          <span>Observaciones</span>
+        </div>
+        <textarea
+          class="campo-control"
+          formControlName="observaciones"
+          rows="3"
+          placeholder="Escribe observaciones (obligatorio para rechazar)..."
+        ></textarea>
+      </div>
+
+      <!-- Acciones -->
+      <div class="actions">
+        <button class="btn-reject" type="button" (click)="rechazar()" [disabled]="submitting()">
+          <i class="fas fa-times-circle"></i>
+          Rechazar
+        </button>
+        <button class="btn-complete" type="submit" [disabled]="submitting()">
+          @if (submitting()) {
+            <span class="spinner-sm"></span>
+            Enviando...
+          } @else {
+            <i class="fas fa-check-circle"></i>
+            Completar tarea
+          }
+        </button>
+      </div>
+
+    </form>
+  }
+
 </section>

@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: '/api/v1',        // ← Nginx resolverá esto al backend
+  apiUrl: '/api/v1',        
   wsUrl: '/ws',
   wsMonitorUrl: '/ws-monitor'
 };

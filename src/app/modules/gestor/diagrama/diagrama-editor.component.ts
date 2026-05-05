@@ -15,22 +15,28 @@ import { PoliticaService, type TransicionDiagramaGuardado } from '../../../core/
 import type { Politica } from '../../../core/models/politica.model';
 
 // Extensión para bloquear edición directa en BPMN.js
-const NoBpmnDirectEditModule = {
-  __init__: [function(eventBus: any) {
-    eventBus.on('element.dblclick', 1500, function(event: any) {
-      const tipo = event?.element?.type;
-      if (tipo === 'bpmn:Participant') {
-        event.preventDefault?.();
-      }
-    });
+// Extensión para bloquear edición directa en BPMN.js
+const initDirectEditBlocker = function(eventBus: any) {
+  eventBus.on('element.dblclick', 1500, function(event: any) {
+    const tipo = event?.element?.type;
+    if (tipo === 'bpmn:Participant') {
+      event.preventDefault?.();
+    }
+  });
 
-    eventBus.on('directEditing.activate', 1500, function(event: any) {
-      const tipo = event?.element?.type;
-      if (tipo === 'bpmn:Participant') {
-        event.preventDefault?.();
-      }
-    });
-  }]
+  eventBus.on('directEditing.activate', 1500, function(event: any) {
+    const tipo = event?.element?.type;
+    if (tipo === 'bpmn:Participant') {
+      event.preventDefault?.();
+    }
+  });
+};
+
+// 👇 ESTA ES LA LÍNEA MÁGICA QUE EVITA EL ERROR EN PRODUCCIÓN 👇
+initDirectEditBlocker.$inject = ['eventBus'];
+
+const NoBpmnDirectEditModule = {
+  __init__: [ initDirectEditBlocker ]
 };
 
 @Component({

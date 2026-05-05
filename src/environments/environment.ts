@@ -1,6 +1,6 @@
 export const environment = {
-  production: false,   // aunque sea false, no importa
-  apiUrl:  'http://localhost:8080/api/v1',
-  wsUrl: '/ws',
-  wsMonitorUrl: '/ws-monitor'
+  production: false,
+  apiUrl: 'http://localhost:8080/api/v1',  // ← Con /api/v1 para coincidir con backend
+  wsUrl: 'ws://localhost:8080/ws',
+  wsMonitorUrl: 'ws://localhost:8080/ws-monitor'
 };

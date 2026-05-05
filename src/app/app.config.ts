@@ -7,5 +7,10 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideAnimations(), provideRouter(routes), provideHttpClient(withInterceptors([authInterceptor]))],
+  providers: [
+    provideAnimations(),
+    provideRouter(routes),
+    provideHttpClient(withInterceptors([authInterceptor])),
+  ],
 };
+

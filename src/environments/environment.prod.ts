@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: '/',           // ← relativo, Nginx resolverá
+  apiUrl: '/api/v1',        
   wsUrl: '/ws',
   wsMonitorUrl: '/ws-monitor'
 };

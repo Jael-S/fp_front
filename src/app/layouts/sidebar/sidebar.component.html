@@ -19,7 +19,7 @@
       <a routerLink="/admin-area/monitoreo" routerLinkActive="active"><i class="fas fa-tv" aria-hidden="true"></i><span>Monitoreo</span></a>
     </ng-container>
 
-    <ng-container *ngIf="role() === 'FUNCIONARIO' || role() === 'OPERADOR'">
+    <ng-container *ngIf="role() === 'FUNCIONARIO'">
       <a routerLink="/funcionario/mis-tareas" routerLinkActive="active"><i class="fas fa-tasks" aria-hidden="true"></i><span>Mis tareas</span></a>
       <a routerLink="/funcionario/historial" routerLinkActive="active"><i class="fas fa-history" aria-hidden="true"></i><span>Historial</span></a>
     </ng-container>

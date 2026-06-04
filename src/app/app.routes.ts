@@ -99,7 +99,7 @@ export const routes: Routes = [
   {
     path: 'funcionario',
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['FUNCIONARIO', 'OPERADOR'] },
+    data: { roles: ['FUNCIONARIO'] },
     component: MainLayoutComponent,
     children: [
       {

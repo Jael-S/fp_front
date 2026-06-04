@@ -10,7 +10,6 @@ export class RolNombrePipe implements PipeTransform {
       GESTOR_SISTEMA: 'Gestor del Sistema',
       ADMINISTRADOR_AREA: 'Administrador de Area',
       FUNCIONARIO: 'Funcionario',
-      OPERADOR: 'Funcionario',
     };
     return value ? (dictionary[value] ?? value) : '-';
   }

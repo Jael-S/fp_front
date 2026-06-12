@@ -9,10 +9,17 @@ export interface Politica {
   estado: EstadoPolitica;
   creadoPor: string;
   diagramaJson: string | null;
+  requisitos?: string[] | null;
+  requisitosObligatorios?: string[] | null;
+  requisitosOpcionales?: string[] | null;
+  etiquetas?: string[] | null;
 }
 
 export interface PoliticaRequest {
   nombre: string;
   descripcion: string;
   diagramaJson: string | null;
+  etiquetas?: string[] | null;
+  requisitosObligatorios?: string[] | null;
+  requisitosOpcionales?: string[] | null;
 }

@@ -27,8 +27,13 @@
 
   @if (!loading()) {
 
-    <!-- Banner sin formulario -->
-    @if (errorMsg() === 'sin_formulario') {
+    <!-- Banner nodo de decision -->
+    @if (esDecision()) {
+      <div class="info-banner">
+        <i class="fas fa-info-circle"></i>
+        Este paso es una decisión. Aprueba para continuar el trámite o recházalo indicando observaciones.
+      </div>
+    } @else if (errorMsg() === 'sin_formulario') {
       <div class="info-banner">
         <i class="fas fa-info-circle"></i>
         Esta tarea no requiere formulario. Puedes completarla directamente.
@@ -48,10 +53,11 @@
       </div>
     }
 
-    <form [formGroup]="form" (ngSubmit)="submit()">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="tarea-layout">
+      <div class="tarea-main">
 
-      <!-- Campos del formulario -->
-      @if (campos().length > 0) {
+      <!-- Campos del formulario (no aplica a nodos de decision) -->
+      @if (!esDecision() && campos().length > 0) {
         <div class="form-card">
           <div class="form-card-header">
             <i class="fas fa-file-alt"></i>
@@ -194,6 +200,51 @@
         </div>
       }
 
+      @if (esDecision()) {
+        <!-- Nodo de decision: solo dos botones grandes -->
+        <div class="decision-panel">
+          <div class="decision-buttons">
+            <button class="btn-decision btn-decision-approve" type="button" (click)="aprobar()" [disabled]="submitting()">
+              @if (submitting()) {
+                <span class="spinner-sm"></span>
+                Enviando...
+              } @else {
+                <i class="fas fa-check-circle"></i>
+                Aprobar
+              }
+            </button>
+            <button class="btn-decision btn-decision-reject" type="button" (click)="mostrarRechazoDecision.set(true)" [disabled]="submitting()">
+              <i class="fas fa-times-circle"></i>
+              Rechazar
+            </button>
+          </div>
+
+          @if (mostrarRechazoDecision()) {
+            <div class="form-card obs-card">
+              <div class="form-card-header">
+                <i class="fas fa-comment-alt"></i>
+                <span>Observaciones (obligatorio)</span>
+              </div>
+              <textarea
+                class="campo-control"
+                formControlName="observaciones"
+                rows="3"
+                placeholder="Indica el motivo del rechazo..."
+              ></textarea>
+              <div class="actions">
+                <button class="btn-cancel" type="button" (click)="mostrarRechazoDecision.set(false)">
+                  Cancelar
+                </button>
+                <button class="btn-reject" type="button" (click)="rechazar()" [disabled]="submitting()">
+                  <i class="fas fa-times-circle"></i>
+                  Confirmar rechazo
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+
       <!-- Observaciones -->
       <div class="form-card obs-card">
         <div class="form-card-header">
@@ -224,6 +275,45 @@
           }
         </button>
       </div>
+      }
+
+      </div>
+
+      <!-- Documentos del cliente (subidos via agente) -->
+      <aside class="tarea-sidebar">
+        <div class="form-card docs-card">
+          <div class="form-card-header">
+            <i class="fas fa-folder-open"></i>
+            <span>Documentos del solicitante</span>
+          </div>
+          @if (ejecucion()?.adjuntosCliente && ejecucion()!.adjuntosCliente!.length > 0) {
+            <div class="adjuntos-lista">
+              @for (url of ejecucion()!.adjuntosCliente!; track url) {
+                <div class="adjunto-item">
+                  <div class="adjunto-info">
+                    <i class="fas" [class]="iconoArchivo(url)"></i>
+                    <span class="adjunto-nombre">{{ nombreArchivo(url) }}</span>
+                  </div>
+                  @if (esImagen(url)) {
+                    <a [href]="url" target="_blank" rel="noopener" class="adjunto-preview">
+                      <img [src]="url" [alt]="nombreArchivo(url)" />
+                    </a>
+                  }
+                  <a class="adjunto-link" [href]="url" target="_blank" rel="noopener" download>
+                    <i class="fas fa-download"></i>
+                    Ver / Descargar
+                  </a>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="adjuntos-vacio">
+              <i class="fas fa-folder-open"></i>
+              <span>El solicitante no adjuntó documentos.</span>
+            </div>
+          }
+        </div>
+      </aside>
 
     </form>
   }

@@ -33,6 +33,8 @@ export class EjecutarTareaComponent {
   readonly errorMsg     = signal<string | null>(null);
   readonly submitError  = signal<string | null>(null);
   readonly campos       = computed(() => this.formulario()?.campos ?? []);
+  readonly esDecision   = computed(() => this.ejecucion()?.nodoTipo === 'DECISION');
+  readonly mostrarRechazoDecision = signal(false);
 
   constructor() {
     this.load();
@@ -195,6 +197,53 @@ export class EjecutarTareaComponent {
       error: () => {
         this.submitting.set(false);
         this.submitError.set('No se pudo completar la tarea. Intente nuevamente.');
+      },
+    });
+  }
+
+  nombreArchivo(url: string): string {
+    try {
+      const sinQuery = url.split('?')[0];
+      const parts = sinQuery.split('/');
+      const nombre = decodeURIComponent(parts[parts.length - 1]) || 'Documento';
+      // Quitar prefijo de timestamp (ej: 1718000000000_archivo.pdf)
+      return nombre.replace(/^\d+_/, '');
+    } catch {
+      return 'Documento';
+    }
+  }
+
+  private extensionArchivo(url: string): string {
+    const nombre = this.nombreArchivo(url).toLowerCase();
+    const idx = nombre.lastIndexOf('.');
+    return idx >= 0 ? nombre.substring(idx + 1) : '';
+  }
+
+  esImagen(url: string): boolean {
+    return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(this.extensionArchivo(url));
+  }
+
+  iconoArchivo(url: string): string {
+    const ext = this.extensionArchivo(url);
+    if (this.esImagen(url)) return 'fa-file-image';
+    if (ext === 'pdf') return 'fa-file-pdf';
+    if (['doc', 'docx'].includes(ext)) return 'fa-file-word';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'fa-file-excel';
+    if (['zip', 'rar', '7z'].includes(ext)) return 'fa-file-archive';
+    return 'fa-file-alt';
+  }
+
+  aprobar(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id || this.submitting()) return;
+    this.submitting.set(true);
+    this.submitError.set(null);
+    const payload = { decision: 'aprobar', aprobado: true, respuesta: 'aprobar', resultado: 'aprobado' };
+    this.ejecucionService.completar(id, payload, []).subscribe({
+      next: () => this.router.navigate(['/funcionario/mis-tareas']),
+      error: () => {
+        this.submitting.set(false);
+        this.submitError.set('No se pudo aprobar la tarea. Intente nuevamente.');
       },
     });
   }

@@ -1,165 +1,234 @@
-<div class="diagrama-container">
+<div class="editor-root">
+
+  <!-- ── TOOLBAR ──────────────────────────────────────────────────────────── -->
   <div class="toolbar">
-    <button type="button" (click)="guardar()" [disabled]="isSaving">💾 Guardar</button>
-    <button type="button" (click)="autoLayout()">⟳ Auto organizar</button>
-    <button type="button" (click)="zoomIn()">🔍+</button>
-    <button type="button" (click)="zoomOut()">🔍-</button>
-    <button type="button" (click)="resetZoom()">Reset</button>
-    <button type="button" (click)="exportarPNG()">PNG</button>
-    <button type="button" (click)="exportarPDF()">PDF</button>
-    <button type="button" (click)="validar()">Validar</button>
-  </div>
-  <div class="canvas-container">
-    <div id="bpmn-canvas"></div>
-  </div>
-</div>
-
-<!-- ===== MODAL: SELECCIONAR DEPARTAMENTO PARA CARRIL ===== -->
-<div class="modal-overlay" *ngIf="mostrandoSelectorCarril">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Seleccionar Departamento</h2>
+    <span class="toolbar-title">Editor de Diagrama</span>
+    <div class="toolbar-actions">
+      <button class="btn btn-secondary" (click)="autoOrganizar()" title="Auto-organizar">
+        <i class="fas fa-sitemap"></i> Organizar
+      </button>
+      <button class="btn btn-ia" (click)="abrirModalIa()">
+        <i class="fas fa-robot"></i> Generar con IA
+      </button>
+      <button class="btn btn-secondary" (click)="exportarPng()" [disabled]="exportando()">
+        <i class="fas fa-image"></i> PNG
+      </button>
+      <button class="btn btn-secondary" (click)="exportarPdf()" [disabled]="exportando()">
+        <i class="fas fa-file-pdf"></i> PDF
+      </button>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+        <i class="fas fa-save"></i>
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
     </div>
-    <div class="modal-body">
-      <div class="departamentos-grid">
-        <button 
-          type="button"
-          class="dept-btn"
-          *ngFor="let dept of departamentosDisponibles"
-          (click)="seleccionarDepartamento(dept)">
-          {{ dept.nombre }}
+  </div>
+
+  <!-- ── MENSAJES ──────────────────────────────────────────────────────────── -->
+  @if (mensajeGuardado) {
+    <div class="alert alert-success">
+      <i class="fas fa-check-circle"></i> {{ mensajeGuardado }}
+    </div>
+  }
+  @if (erroresValidacion.length > 0) {
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <ul>
+        @for (err of erroresValidacion; track err) { <li>{{ err }}</li> }
+      </ul>
+    </div>
+  }
+  @if (advertenciasValidacion.length > 0) {
+    <div class="alert alert-warning">
+      <i class="fas fa-exclamation-circle"></i>
+      <ul>
+        @for (adv of advertenciasValidacion; track adv) { <li>{{ adv }}</li> }
+      </ul>
+    </div>
+  }
+
+  <!-- ── CARRILES ─────────────────────────────────────────────────────────────── -->
+  <div class="carriles-bar">
+    <span class="carriles-label">
+      <i class="fas fa-columns"></i> CARRILES:
+    </span>
+
+    <!-- Chips de carriles activos (con botón ✕ para eliminar) -->
+    @for (lane of lanes; track lane.departamentoId) {
+      <span class="lane-chip">
+        <span class="lane-chip-name">{{ lane.nombre }}</span>
+        <button class="lane-chip-remove"
+                (click)="eliminarCarril(lane.departamentoId)"
+                title="Eliminar carril {{ lane.nombre }}">×</button>
+      </span>
+    }
+
+    <!-- Separador visual si hay tanto activos como disponibles -->
+    @if (lanes.length > 0) {
+      <span class="carriles-sep">|</span>
+    }
+
+    <!-- Botones para agregar departamentos aún no agregados -->
+    @for (dept of departamentos; track dept.id) {
+      @if (!estaAgregado(dept.id)) {
+        <button class="btn-carril"
+                (click)="agregarCarril(dept)"
+                [title]="'Agregar carril: ' + dept.nombre">
+          <i class="fas fa-plus-circle"></i> {{ dept.nombre }}
         </button>
-      </div>
-      <div *ngIf="!departamentosDisponibles.length" class="no-items">
-        <p>No hay departamentos disponibles</p>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-cancel" (click)="cancelarSelectorCarril()">Cancelar</button>
-    </div>
+      }
+    }
+
+    @if (departamentos.length === 0) {
+      <span class="carriles-empty">Cargando departamentos…</span>
+    }
   </div>
-</div>
 
-<!-- ===== MODAL: EDITAR TAREA (NOMBRE + FORMULARIO) ===== -->
-<div class="modal-overlay" *ngIf="mostrandoModalTarea">
-  <div class="modal modal-md">
-    <div class="modal-header">
-      <h2>Editar Tarea</h2>
+  <!-- ── CUERPO ─────────────────────────────────────────────────────────────── -->
+  <div class="editor-body">
+
+    <!-- Paleta -->
+    <aside class="palette">
+      <p class="palette-title">Nodos</p>
+      @for (tipo of tiposNodo; track tipo) {
+        <div class="palette-item" draggable="true"
+             (dragstart)="onDragStart($event, tipo)"
+             [title]="'Arrastrar al lienzo: ' + nombreTipo(tipo)">
+          <span class="shape-preview" [class]="'shape-' + tipo.toLowerCase()"></span>
+          <span class="shape-label">{{ nombreTipo(tipo) }}</span>
+        </div>
+      }
+    </aside>
+
+    <!-- Canvas JointJS -->
+    <div class="canvas-wrapper">
+      <div #canvasEl class="joint-canvas"></div>
     </div>
-    <div class="modal-body">
-      <!-- Nombre del nodo -->
-      <div class="form-group">
-        <label>Nombre de la Tarea:</label>
-        <input 
-          type="text" 
-          [(ngModel)]="nombreTarea"
-          placeholder="Ej: Revisar solicitud de crédito"
-          class="form-input">
-      </div>
 
-      <div class="form-group">
-        <label>Departamento</label>
-        <select
-          class="form-select"
-          [(ngModel)]="departamentoSeleccionadoId"
-          (ngModelChange)="onDepartamentoChange()">
-          <option [ngValue]="null">Seleccione...</option>
-          <option *ngFor="let d of departamentos" [ngValue]="d.id">{{ d.nombre }}</option>
-        </select>
-      </div>
+    <!-- Panel de propiedades -->
+    <aside class="properties-panel">
 
-      <div class="form-group">
-        <label>Formulario</label>
-        <select
-          class="form-select"
-          [(ngModel)]="formularioSeleccionadoId"
-          [disabled]="!departamentoSeleccionadoId">
-          <option [ngValue]="null">Seleccione...</option>
-          <option *ngFor="let f of formulariosFiltrados" [ngValue]="f.id">{{ f.nombre }}</option>
-        </select>
-      </div>
+      @if (selectedNodo) {
+        <div class="prop-section">
+          <p class="prop-title">Nodo seleccionado</p>
 
-      <div class="create-new-form">
-        <button type="button" class="link-btn" (click)="crearNuevoFormulario()">
-          + Crear nuevo formulario
-        </button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-cancel" (click)="cancelarModalTarea()">Cancelar</button>
-      <button type="button" class="btn-primary" (click)="guardarTarea()">Guardar</button>
-    </div>
-  </div>
-</div>
+          <label class="prop-label">Tipo</label>
+          <span class="tipo-badge tipo-{{ selectedNodo.tipo.toLowerCase() }}">{{ nombreTipo(selectedNodo.tipo) }}</span>
 
-<!-- ===== MODAL: EDITAR DECISIÓN ===== -->
-<div class="modal-overlay" *ngIf="mostrandoModalDecision">
-  <div class="modal modal-lg">
-    <div class="modal-header">
-      <h2>Editar Decisión</h2>
-    </div>
-    <div class="modal-body">
-      <!-- Etiqueta del Gateway -->
-      <div class="form-group">
-        <label>Etiqueta de la Decisión:</label>
-        <input 
-          type="text" 
-          [(ngModel)]="decisionEtiqueta"
-          placeholder="Ej: Documento válido?"
-          class="form-input">
-      </div>
+          <label class="prop-label">Nombre</label>
+          <input class="prop-input" [(ngModel)]="modalNombre"
+                 placeholder="Nombre del nodo" (blur)="guardarModalNodo()" />
 
-      <!-- Tipo de Flujo -->
-      <div class="form-group">
-        <label>Tipo de Flujo:</label>
-        <select [(ngModel)]="tipoFlujo" class="form-select">
-          <option value="SECUENCIAL">Secuencial (una salida)</option>
-          <option value="ALTERNATIVO">Alternativo (Sí/No)</option>
-          <option value="PARALELO">Paralelo (múltiples simultáneas)</option>
-          <option value="ITERATIVO">Iterativo (vuelve atrás)</option>
-        </select>
-      </div>
+          <label class="prop-label">Departamento</label>
+          <select class="prop-input" [(ngModel)]="modalDepartamentoId" (change)="onDepartamentoChange()">
+            <option value="">— Sin departamento —</option>
+            @for (dept of departamentos; track dept.id) {
+              <option [value]="dept.id">{{ dept.nombre }}</option>
+            }
+          </select>
 
-      <!-- Condiciones de salida -->
-      <div class="form-group">
-        <label>Condiciones de Salida:</label>
-        <div class="condiciones-list">
-          <div class="condicion-item" *ngFor="let cond of decisionCondiciones">
-            <input 
-              type="text" 
-              [(ngModel)]="cond.salida"
-              placeholder="Ej: Sí, No, Pendiente"
-              class="form-input">
+          @if (selectedNodo.tipo === 'TAREA') {
+            <label class="prop-label">Formulario</label>
+            <select class="prop-input" [(ngModel)]="modalFormularioId" (change)="guardarModalNodo()">
+              <option value="">— Sin formulario —</option>
+              @for (f of formularios(); track f.id) {
+                <option [value]="f.id">{{ f.nombre }}</option>
+              }
+            </select>
+            <button class="btn btn-outline-crear" (click)="navegarACrearFormulario()" type="button">
+              <i class="fas fa-plus"></i> Crear formulario
+            </button>
+          }
+
+          <div class="prop-actions">
+            <button class="btn btn-danger btn-sm" (click)="eliminarSeleccionado()">
+              <i class="fas fa-trash"></i> Eliminar nodo
+            </button>
           </div>
+        </div>
+      }
+
+      @if (selectedTransicion) {
+        <div class="prop-section">
+          <p class="prop-title">Transición seleccionada</p>
+
+          <label class="prop-label">Tipo</label>
+          <select class="prop-input" [ngModel]="selectedTransicion.tipo"
+                  (ngModelChange)="cambiarTipoTransicion($event)">
+            @for (t of tiposTransicion; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+
+          <label class="prop-label">Etiqueta</label>
+          <input class="prop-input" [ngModel]="selectedTransicion.etiqueta ?? ''"
+                 (ngModelChange)="actualizarEtiqueta($event)"
+                 placeholder="Ej: Aprobado / Rechazado" />
+
+          <div class="prop-actions">
+            <button class="btn btn-danger btn-sm" (click)="eliminarSeleccionado()">
+              <i class="fas fa-trash"></i> Eliminar conexión
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (!selectedNodo && !selectedTransicion) {
+        <div class="prop-section prop-empty">
+          <i class="fas fa-mouse-pointer fa-2x"></i>
+          <p>Haz clic en un nodo o conexión para editar sus propiedades.</p>
+          <p class="hint">Arrastra desde la paleta para agregar nodos.</p>
+          <p class="hint">Conecta nodos arrastrando desde un puerto azul.</p>
+        </div>
+      }
+
+      <div class="prop-summary">
+        <span><strong>{{ nodos.length }}</strong> nodos</span>
+        <span><strong>{{ transiciones.length }}</strong> conexiones</span>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ══ MODAL IA ═══════════════════════════════════════════════════════════════ -->
+@if (modoModal() === 'ia') {
+  <div class="modal-overlay" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><i class="fas fa-robot"></i> Generar diagrama con IA</h3>
+        <button class="modal-close" (click)="cerrarModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="prop-label">Describe el proceso en lenguaje natural:</label>
+        <div class="ia-textarea-wrap">
+          <textarea class="ia-textarea" [(ngModel)]="iaDescripcion" rows="5"
+            placeholder="Ej: El cliente solicita una instalación. El área de atención revisa la solicitud y decide si es aprobada o rechazada. Si es aprobada, el área técnica realiza la instalación.">
+          </textarea>
+          <button class="btn-mic" type="button"
+                  [class.btn-mic--activo]="iaEscuchando()"
+                  (click)="iniciarGrabacionIa()"
+                  [title]="iaEscuchando() ? 'Detener grabación' : 'Dictar descripción por voz'">
+            <i class="fas" [class.fa-microphone]="!iaEscuchando()" [class.fa-stop-circle]="iaEscuchando()"></i>
+          </button>
+        </div>
+        @if (iaEscuchando()) {
+          <p class="ia-mic-hint"><i class="fas fa-circle ia-mic-pulse"></i> Escuchando... haz clic en <i class="fas fa-stop-circle"></i> para detener</p>
+        }
+        @if (iaError) {
+          <p class="ia-error"><i class="fas fa-exclamation-triangle"></i> {{ iaError }}</p>
+        }
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" (click)="generarConIa()"
+                  [disabled]="iaCargando() || !iaDescripcion.trim()">
+            @if (iaCargando()) {
+              <i class="fas fa-spinner fa-spin"></i> Generando...
+            } @else {
+              <i class="fas fa-magic"></i> Generar
+            }
+          </button>
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-cancel" (click)="cancelarModalDecision()">Cancelar</button>
-      <button type="button" class="btn-primary" (click)="guardarDecision()">Guardar</button>
-    </div>
   </div>
-</div>
-
-<!-- ===== MODAL: EDITAR NOMBRE DE NODO ===== -->
-<div class="modal-overlay" *ngIf="mostrandoModalNombre">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <h2>Editar Nombre</h2>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nombre del Nodo:</label>
-        <input 
-          type="text" 
-          [(ngModel)]="nombreNodo"
-          placeholder="Ingrese nombre"
-          class="form-input">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-cancel" (click)="cancelarModalNombre()">Cancelar</button>
-      <button type="button" class="btn-primary" (click)="guardarNombre()">Guardar</button>
-    </div>
-  </div>
-</div>
+}

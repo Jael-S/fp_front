@@ -64,6 +64,21 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/gestor/analisis-ia/analisis-ia.component').then((m) => m.AnalisisIaComponent),
       },
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import('./modules/gestor/reportes/reportes.component').then((m) => m.ReportesComponent),
+      },
+      {
+        path: 'documentos',
+        loadComponent: () =>
+          import('./modules/gestor/documentos/documentos.component').then((m) => m.DocumentosComponent),
+      },
+      {
+        path: 'documentos/editor/:documentoId',
+        loadComponent: () =>
+          import('./modules/gestor/documentos/editor-documento.component').then((m) => m.EditorDocumentoComponent),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
@@ -124,6 +139,20 @@ export const routes: Routes = [
     path: 'seguimiento',
     loadComponent: () =>
       import('./modules/public/seguimiento/seguimiento.component').then((m) => m.SeguimientoComponent),
+  },
+  {
+    path: 'cliente',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['CLIENTE'] },
+    component: MainLayoutComponent,
+    children: [
+      {
+        path: 'agente',
+        loadComponent: () =>
+          import('./modules/cliente/agente/agente-chat.component').then((m) => m.AgenteChatComponent),
+      },
+      { path: '', redirectTo: 'agente', pathMatch: 'full' },
+    ],
   },
   { path: 'operador', redirectTo: '/funcionario/mis-tareas', pathMatch: 'full' },
   { path: '', redirectTo: '/login', pathMatch: 'full' },

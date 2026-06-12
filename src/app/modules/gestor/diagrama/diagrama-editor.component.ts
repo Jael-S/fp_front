@@ -1,827 +1,916 @@
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { AfterViewInit, Component, OnDestroy, ViewEncapsulation, inject, NgZone, ChangeDetectorRef } from '@angular/core';
+import {
+  Component, OnInit, OnDestroy, AfterViewInit,
+  ElementRef, ViewChild, inject, signal,
+} from '@angular/core';
+import { CommonModule }       from '@angular/common';
+import { FormsModule }        from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import BpmnModeler from 'bpmn-js/lib/Modeler';
-import jsPDF from 'jspdf';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { firstValueFrom } from 'rxjs';
-import { Departamento } from '../../../core/models/departamento.model';
-import { Formulario } from '../../../core/models/formulario.model';
+import * as joint             from '@joint/core';
+import { Client }             from '@stomp/stompjs';
+import SockJS                 from 'sockjs-client';
+import html2canvas            from 'html2canvas';
+import { jsPDF }              from 'jspdf';
+import { Subscription }       from 'rxjs';
+
+import { environment }         from '../../../../environments/environment';
 import { DepartamentoService } from '../../../core/services/departamento.service';
-import { FormularioService } from '../../../core/services/formulario.service';
-import { TareaService } from '../../../core/services/tarea.service';
-import { PoliticaService, type TransicionDiagramaGuardado } from '../../../core/services/politica.service';
-import type { Politica } from '../../../core/models/politica.model';
+import { FormularioService }   from '../../../core/services/formulario.service';
+import { IaService }           from '../../../core/services/ia.service';
+import { PoliticaService }     from '../../../core/services/politica.service';
+import { Departamento }        from '../../../core/models/departamento.model';
+import { Formulario }          from '../../../core/models/formulario.model';
+import {
+  TipoNodo, TipoTransicion, LANE_WIDTH, LANE_GAP, LANE_HEADER,
+  crearNodoShape, crearLink,
+}                              from './uml-shapes.constants';
+import { calcularLayout }      from './diagram-layout.util';
+import {
+  NodoEstado, TransicionEstado, validarDiagrama,
+}                              from './diagram-validators';
 
-// Extensión para bloquear edición directa en BPMN.js
-// Extensión para bloquear edición directa en BPMN.js
-const initDirectEditBlocker = function(eventBus: any) {
-  eventBus.on('element.dblclick', 1500, function(event: any) {
-    const tipo = event?.element?.type;
-    if (tipo === 'bpmn:Participant') {
-      event.preventDefault?.();
-    }
-  });
+// ─── Tipos internos ───────────────────────────────────────────────────────────
 
-  eventBus.on('directEditing.activate', 1500, function(event: any) {
-    const tipo = event?.element?.type;
-    if (tipo === 'bpmn:Participant') {
-      event.preventDefault?.();
-    }
-  });
-};
+interface LaneState {
+  jointId:        string;
+  departamentoId: string;
+  nombre:         string;
+  x:              number;
+}
 
-// 👇 ESTA ES LA LÍNEA MÁGICA QUE EVITA EL ERROR EN PRODUCCIÓN 👇
-initDirectEditBlocker.$inject = ['eventBus'];
+interface NodoLocal extends NodoEstado {
+  jointId:   string;
+  posicionX: number;
+  posicionY: number;
+}
 
-const NoBpmnDirectEditModule = {
-  __init__: [ initDirectEditBlocker ]
-};
+interface TransicionLocal extends TransicionEstado {
+  jointId: string;
+}
+
+type ModoModal = 'nodo' | 'ia' | null;
+
+const MIN_LANE_HEIGHT = 620;
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-diagrama-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './diagrama-editor.component.html',
-  styleUrl: './diagrama-editor.component.scss',
-  encapsulation: ViewEncapsulation.None,
+  styleUrls: ['./diagrama-editor.component.scss'],
 })
-export class DiagramaEditorComponent implements AfterViewInit, OnDestroy {
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly politicaService = inject(PoliticaService);
-  private readonly departamentoService = inject(DepartamentoService);
-  private readonly formularioService = inject(FormularioService);
-  private readonly tareaService = inject(TareaService);
-  private readonly snackBar = inject(MatSnackBar);
-  private readonly ngZone = inject(NgZone);
-  private readonly cdr = inject(ChangeDetectorRef);
+export class DiagramaEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
-  private modeler: BpmnModeler | null = null;
-  private politica: Politica | null = null;
+  @ViewChild('canvasEl', { static: false }) canvasRef!: ElementRef<HTMLDivElement>;
+
+  // ── Servicios ─────────────────────────────────────────────────────────────
+  private readonly route          = inject(ActivatedRoute);
+  private readonly router         = inject(Router);
+  private readonly deptoSvc       = inject(DepartamentoService);
+  private readonly formularioSvc  = inject(FormularioService);
+  private readonly iaSvc          = inject(IaService);
+  private readonly politicaSvc    = inject(PoliticaService);
+
+  // ── Estado ────────────────────────────────────────────────────────────────
+  politicaId    = '';
   departamentos: Departamento[] = [];
-  private formularios: Formulario[] = [];
-  isSaving = false;
-  private politicaId: string | null = null;
+  nodos:        NodoLocal[]     = [];
+  transiciones: TransicionLocal[] = [];
+  lanes:        LaneState[]     = [];
 
-  // ===== ESTADO DE MODALES =====
-  // Modal: Seleccionar Departamento para Carril
-  mostrandoSelectorCarril = false;
-  departamentosDisponibles: Departamento[] = [];
-  private carriSeleccionado: any = null;
-  private esNuevoCarril = false;
+  // ── JointJS ──────────────────────────────────────────────────────────────
+  private graph!: joint.dia.Graph;
+  private paper!: joint.dia.Paper;
+  private idMap      = new Map<string, string>();   // jointId → tempId
+  private elementMap = new Map<string, joint.dia.Element>(); // tempId → element
+  private tempCounter = 0;
 
-  // Modal: Editar Tarea (nombre + departamento + formulario)
-  mostrandoModalTarea = false;
-  nombreTarea = '';
-  departamentoSeleccionadoId: string | null = null;
-  formularioSeleccionadoId: string | null = null;
-  formulariosFiltrados: Formulario[] = [];
-  private tareaSeleccionada: any = null;
+  // ── Selección ─────────────────────────────────────────────────────────────
+  selectedNodo:      NodoLocal       | null = null;
+  selectedTransicion: TransicionLocal | null = null;
 
-  // Modal: Editar Decisión (condiciones + tipo de flujo)
-  mostrandoModalDecision = false;
-  decisionEtiqueta = '';
-  tipoFlujo: 'SECUENCIAL' | 'ALTERNATIVO' | 'PARALELO' | 'ITERATIVO' = 'SECUENCIAL';
-  decisionCondiciones: Array<{ id: string; salida: string }> = [];
-  private decisionSeleccionada: any = null;
+  // ── Formularios del nodo seleccionado ─────────────────────────────────────
+  formularios = signal<Formulario[]>([]);
 
-  // Modal: Editar Nombre
-  mostrandoModalNombre = false;
-  nombreNodo = '';
-  private nodoSeleccionado: any = null;
+  // ── Canvas dinámico ──────────────────────────────────────────────────────
+  private laneHeight  = MIN_LANE_HEIGHT;
 
-  async ngAfterViewInit(): Promise<void> {
-    this.politicaId = this.route.snapshot.paramMap.get('politicaId');
-    if (!this.politicaId) {
-      this.router.navigate(['/gestor/politicas']);
-      return;
-    }
-  
-    this.initModeler();
-    setTimeout(() => this.registerEventHandlers(), 100);
+  // ── Modales ───────────────────────────────────────────────────────────────
+  modoModal           = signal<ModoModal>(null);
+  modalNombre         = '';
+  modalDepartamentoId = '';
+  modalFormularioId   = '';
+  iaDescripcion      = '';
+  iaCargando         = signal(false);
+  iaEscuchando       = signal(false);
+  iaError            = '';
+  private iaRecognition: any = null;
 
-    this.departamentoService.list(0, 200).subscribe({
-      next: (res) => (this.departamentos = res.items),
-      error: () => (this.departamentos = []),
-    });
+  // ── UI ────────────────────────────────────────────────────────────────────
+  guardando           = signal(false);
+  exportando          = signal(false);
+  erroresValidacion:  string[] = [];
+  advertenciasValidacion: string[] = [];
+  mensajeGuardado     = '';
 
-    this.formularioService.listByPolitica(this.politicaId).subscribe({
-      next: (res) => {
-        this.formularios = res;
-        console.log('✅ Formularios cargados en ngAfterViewInit:', this.formularios);
-        if (!Array.isArray(this.formularios) || this.formularios.length === 0) {
-          console.warn('⚠️ No hay formularios para esta política. Intentando cargar TODOS los formularios...');
-          // Fallback: cargar todos los formularios sin filtro
-          this.formularioService.list().subscribe({
-            next: (allFormularios) => {
-              this.formularios = allFormularios;
-              console.log('✅ Todos los formularios cargados (fallback):', this.formularios);
-            },
-            error: (fallbackErr) => {
-              console.error('❌ Error cargando formularios en fallback:', fallbackErr);
-              this.formularios = [];
-            }
-          });
-        }
-      },
-      error: (err) => {
-        console.error('❌ Error cargando formularios en ngAfterViewInit:', err);
-        console.log('Intentando fallback: cargar TODOS los formularios...');
-        // Fallback: cargar todos los formularios sin filtro
-        this.formularioService.list().subscribe({
-          next: (allFormularios) => {
-            this.formularios = allFormularios;
-            console.log('✅ Todos los formularios cargados (fallback):', this.formularios);
-          },
-          error: (fallbackErr) => {
-            console.error('❌ Error en fallback también:', fallbackErr);
-            this.formularios = [];
-          }
-        });
-      },
-    });
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  private stompClient?: Client;
 
-    this.politicaService.getById(this.politicaId).subscribe({
-      next: async (p) => {
-        this.politica = p;
-        await this.importSafeXml(this.toBpmnXml(p.diagramaJson));
-        setTimeout(() => this.registerEventHandlers(), 100);
-      },
-      error: (err) => this.mostrarMensaje(err?.error?.message ?? 'No se pudo cargar la política', true),
-    });
+  // ── Suscripciones ─────────────────────────────────────────────────────────
+  private subs = new Subscription();
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Ciclo de vida
+  // ──────────────────────────────────────────────────────────────────────────
+
+  ngOnInit(): void {
+    this.politicaId = this.route.snapshot.paramMap.get('politicaId') ?? '';
+    this.subs.add(
+      this.deptoSvc.list(0, 100).subscribe(page => {
+        this.departamentos = page.items;
+        this.cargarDiagramaExistente();
+      }),
+    );
   }
 
-  // ===== MÉTODO HELPER: MOSTRAR MENSAJES =====
-  private mostrarMensaje(mensaje: string, esError: boolean = false, duracion: number = 3000): void {
-    const panelClass = esError ? ['error-snackbar'] : ['success-snackbar'];
-    this.snackBar.open(mensaje, 'Cerrar', {
-      duration: duracion,
-      panelClass,
-      horizontalPosition: 'end',
-      verticalPosition: 'bottom',
-    });
+  ngAfterViewInit(): void {
+    this.initJointJs();
+    this.conectarWebSocket();
   }
 
   ngOnDestroy(): void {
-    try {
-      this.modeler?.destroy();
-    } finally {
-      this.modeler = null;
-    }
+    this.subs.unsubscribe();
+    this.stompClient?.deactivate();
   }
 
-  private initModeler(): void {
-    this.modeler = new BpmnModeler({
-      container: '#bpmn-canvas',
-      additionalModules: [NoBpmnDirectEditModule],
-    });
-  }
+  // ──────────────────────────────────────────────────────────────────────────
+  // Inicialización JointJS
+  // ──────────────────────────────────────────────────────────────────────────
 
-  // ===== REGISTRO DE EVENT HANDLERS =====
-  private registerEventHandlers(): void {
-    const eventBus = this.get('eventBus');
-    if (!eventBus) return;
+  private initJointJs(): void {
+    this.graph = new joint.dia.Graph({}, { cellNamespace: joint.shapes });
 
-    // ===== CLICK SIMPLE =====
-    eventBus.on('element.click', (event: any) => {
-      const element = event?.element;
-      if (!element?.type) return;
-
-      this.ngZone.run(() => {
-        const tipo = element.type;
-
-        // Carril: abrir selector de departamento
-        if (tipo === 'bpmn:Participant') {
-          this.abrirSelectorCarril(element);
-          return;
-        }
-
-        // Tarea: abrir modal de formulario
-        if (tipo === 'bpmn:Task') {
-          void this.abrirModalFormulario(element);
-          return;
-        }
-
-        // Decisión: abrir modal de condiciones
-        if (tipo === 'bpmn:ExclusiveGateway') {
-          this.abrirModalDecision(element);
-          return;
-        }
-      });
+    this.paper = new joint.dia.Paper({
+      el:                 this.canvasRef.nativeElement,
+      model:              this.graph,
+      width:              '100%',
+      height:             MIN_LANE_HEIGHT,
+      gridSize:           10,
+      drawGrid:           { name: 'dot', args: { color: '#d1d5db' } },
+      background:         { color: '#f9fafb' },
+      cellViewNamespace:  joint.shapes,
+      defaultLink:        () => crearLink(),
+      validateConnection: (sv, _sm, tv) => sv.model.id !== tv.model.id,
+      // PROBLEMA 2: carriles no se pueden mover
+      interactive: (cellView: joint.dia.CellView) =>
+        (cellView.model as any).prop('esCarril') ? false : true,
     });
 
-    // ===== DOBLE CLICK =====
-    eventBus.on('element.dblclick', (event: any) => {
-      const element = event?.element;
-      if (!element?.type) return;
-
-      this.ngZone.run(() => {
-        // Todos los nodos pueden editar nombre con doble click
-        this.abrirModalNombre(element);
-      });
-    });
-
-    // ===== CREAR NUEVO PARTICIPANT =====
-    eventBus.on('shape.create', (event: any) => {
-      const shape = event?.context?.shape || event?.shape;
-      if (shape?.type === 'bpmn:Participant') {
-        event.preventDefault?.();
-        this.ngZone.run(() => {
-          this.carriSeleccionado = shape;
-          this.esNuevoCarril = true;
-          this.abrirSelectorCarrilModal();
-        });
+    this.paper.on('element:pointerclick',  (view)  => this.onElementClick(view));
+    this.paper.on('link:connect',          (view)  => this.onLinkConnect(view as any));
+    this.paper.on('link:pointerclick',     (view: joint.dia.LinkView) => {
+      this.selectedNodo = null;
+      const jointId = view.model.id as string;
+      const found = this.transiciones.find(t => t.jointId === jointId);
+      if (found) {
+        this.selectedTransicion = found;
+      } else {
+        // Flecha sin registro en estado local (huérfana) → eliminarla al hacer clic
+        view.model.remove();
+        this.selectedTransicion = null;
       }
     });
-
-    // ===== FALLBACK PARTICIPANT SIN NOMBRE =====
-    eventBus.on('shape.added', (event: any) => {
-      const element = event?.element;
-      if (element?.type === 'bpmn:Participant' && !element?.businessObject?.name?.trim()) {
-        setTimeout(() => {
-          this.ngZone.run(() => {
-            this.carriSeleccionado = element;
-            this.esNuevoCarril = true;
-            this.abrirSelectorCarrilModal();
-          });
-        }, 100);
-      }
+    this.paper.on('blank:pointerclick',    ()      => {
+      this.selectedNodo = null;
+      this.selectedTransicion = null;
     });
 
-    this.registerCrossLaneConnectionRules();
-  }
-
-  /**
-   * Prioridad máxima para permitir SequenceFlow entre cualquier elemento
-   * en distintos carriles, incluyendo ExclusiveGateway → Task cross-lane.
-   */
-  private registerCrossLaneConnectionRules(): void {
-    const rules = this.get('rules') as { addRule?: (name: string, priority: number, fn: (ctx: any) => unknown) => void } | null;
-    if (!rules?.addRule) return;
-    try {
-      rules.addRule('connection.create', 999999, (context: any) => {
-        const source = context?.source;
-        const target = context?.target;
-        if (!source || !target) return false;
-        // Bloquear solo conexiones directas Participante → Participante
-        if (source.type === 'bpmn:Participant' && target.type === 'bpmn:Participant') return false;
-        // Permitir cualquier conexión donde ninguno sea Participante
-        if (source.type !== 'bpmn:Participant' && target.type !== 'bpmn:Participant') {
-          return { type: 'bpmn:SequenceFlow' };
-        }
-        // Permitir explícitamente si alguno es Gateway (cross-lane desde/hacia decisión)
-        if (source.type === 'bpmn:ExclusiveGateway' || target.type === 'bpmn:ExclusiveGateway') {
-          return { type: 'bpmn:SequenceFlow' };
-        }
-        return false;
+    // PROBLEMA 3: puertos visibles solo en hover
+    this.paper.on('element:mouseenter', (view: joint.dia.ElementView) => {
+      if ((view.model as any).prop('esCarril')) return;
+      view.model.getPorts().forEach((port: any) => {
+        view.model.portProp(port.id, 'attrs/circle/visibility', 'visible');
       });
-    } catch {
-      // Si la versión de diagram-js cambia la API de rules, no bloquear el editor
-    }
+    });
+    this.paper.on('element:mouseleave', (view: joint.dia.ElementView) => {
+      if ((view.model as any).prop('esCarril')) return;
+      view.model.getPorts().forEach((port: any) => {
+        view.model.portProp(port.id, 'attrs/circle/visibility', 'hidden');
+      });
+    });
+
+    // Eliminar flecha huérfana: usa el linkView del evento para actuar sobre el link exacto
+    this.paper.on('link:pointerup', (linkView: joint.dia.LinkView) => {
+      const link = linkView.model;
+      const src  = link.get('source') as any;
+      const tgt  = link.get('target') as any;
+      if (!src?.id || !tgt?.id) {
+        this.transiciones = this.transiciones.filter(t => t.jointId !== (link.id as string));
+        link.remove();
+      }
+    });
+    // Seguridad adicional: limpiar huérfanos cuando el usuario suelta sobre el canvas
+    this.paper.on('blank:pointerup', () => {
+      this.graph.getLinks().forEach(link => {
+        const tgt = link.get('target') as any;
+        if (!tgt?.id) {
+          this.transiciones = this.transiciones.filter(t => t.jointId !== (link.id as string));
+          link.remove();
+        }
+      });
+    });
+
+    this.canvasRef.nativeElement.addEventListener('dragover', e => e.preventDefault());
+    this.canvasRef.nativeElement.addEventListener('drop',    e => this.onDrop(e));
+
+    // Ctrl+Wheel → zoom; Wheel sin Ctrl → scroll nativo del contenedor
+    this.canvasRef.nativeElement.addEventListener('wheel', (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const current  = this.paper.scale();
+      const newScale = Math.max(0.3, Math.min(2.0, current.sx + (e.deltaY < 0 ? 0.1 : -0.1)));
+      this.paper.scale(newScale, newScale);
+    }, { passive: false });
+
+    // Snap nodos dentro de su carril al mover
+    this.graph.on('change:position', (cell: joint.dia.Cell) => {
+      if (!cell.isElement() || (cell as any).prop('esCarril')) return;
+      this.snapNodoEnCarril(cell as joint.dia.Element);
+    });
+
+    // Recalcular altura exacta al soltar el drag (una sola vez por interacción)
+    this.paper.on('element:pointerup', (view: joint.dia.ElementView) => {
+      if ((view.model as any).prop('esCarril')) return;
+      this.recalcularAlturaCarriles();
+    });
   }
 
-  // ===== SELECTOR CARRIL (DEPARTAMENTO) =====
-  private abrirSelectorCarril(element: any): void {
-    this.carriSeleccionado = element;
-    this.esNuevoCarril = false;
-    this.abrirSelectorCarrilModal();
+  // ──────────────────────────────────────────────────────────────────────────
+  // Gestión de carriles (swimlanes)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  estaAgregado(deptId: string): boolean {
+    return this.lanes.some(l => l.departamentoId === deptId);
   }
 
-  private abrirSelectorCarrilModal(): void {
-    const carrilesExistentes = this.obtenerNombresCarrilesDelDiagrama();
-    let nombres = carrilesExistentes;
+  agregarCarril(dept: Departamento): void {
+    if (this.estaAgregado(dept.id)) return;
+    this.insertarCarril(dept);
+  }
 
-    // Si editamos, excluir el nombre actual
-    if (!this.esNuevoCarril && this.carriSeleccionado?.businessObject?.name) {
-      nombres = nombres.filter(
-        (n) => n.toLowerCase() !== this.carriSeleccionado.businessObject.name.toLowerCase()
-      );
-    }
+  eliminarCarril(deptId: string): void {
+    const lane = this.lanes.find(l => l.departamentoId === deptId);
+    if (!lane) return;
 
-    this.departamentosDisponibles = this.departamentos.filter(
-      (d) => !nombres.some((carril) => carril.toLowerCase() === d.nombre.toLowerCase())
+    // tempIds de los nodos que están en este carril
+    const tempIdsEnCarril = new Set(
+      this.nodos.filter(n => n.departamentoId === deptId).map(n => n.tempId),
     );
 
-    if (!this.departamentosDisponibles.length) {
-      window.alert('No hay departamentos disponibles');
+    // Eliminar del graph: la célula del carril + nodos del carril (links se eliminan automáticamente)
+    this.graph.getCells().forEach(c => {
+      const esCelda = (c as any).prop('esCarril') && (c as any).prop('departamentoId') === deptId;
+      const esNodo  = !!(this.idMap.get(c.id as string) && tempIdsEnCarril.has(this.idMap.get(c.id as string)!));
+      if (esCelda || esNodo) c.remove();
+    });
+
+    // Limpiar estado local
+    tempIdsEnCarril.forEach(tid => {
+      const nodo = this.nodos.find(n => n.tempId === tid);
+      if (nodo) this.idMap.delete(nodo.jointId);
+      this.elementMap.delete(tid);
+    });
+    this.nodos        = this.nodos.filter(n => n.departamentoId !== deptId);
+    this.transiciones = this.transiciones.filter(
+      t => !tempIdsEnCarril.has(t.nodoOrigenTempId) && !tempIdsEnCarril.has(t.nodoDestinoTempId),
+    );
+    this.lanes = this.lanes.filter(l => l.departamentoId !== deptId);
+
+    if (this.selectedNodo?.departamentoId === deptId) {
+      this.selectedNodo = null;
+      this.formularios.set([]);
+    }
+  }
+
+  navegarACrearFormulario(): void {
+    if (!this.selectedNodo) return;
+    this.router.navigate(['/gestor/formularios'], {
+      queryParams: {
+        departamentoId: this.selectedNodo.departamentoId ?? '',
+        politicaId:     this.politicaId,
+      },
+    });
+  }
+
+  private insertarCarril(dept: Departamento): void {
+    const x = this.lanes.length * (LANE_WIDTH + LANE_GAP);
+    const rect = new joint.shapes.standard.Rectangle();
+    rect.resize(LANE_WIDTH, this.laneHeight);
+    rect.position(x, 0);
+    rect.prop('esCarril', true);
+    rect.prop('departamentoId', dept.id);
+    rect.set('z', -1);
+    rect.attr({
+      body:  { fill: 'rgba(239,246,255,0.4)', stroke: '#bfdbfe', strokeWidth: 1.5 },
+      label: {
+        text: dept.nombre,
+        fill: '#1e40af',
+        fontSize: 11,
+        fontWeight: 700,
+        textAnchor: 'middle',
+        textVerticalAnchor: 'top',
+        x: LANE_WIDTH / 2,
+        y: 12,
+        stroke: 'rgba(239,246,255,0.9)',
+        strokeWidth: 6,
+        paintOrder: 'stroke',
+      },
+    });
+    this.graph.addCell(rect);
+    this.lanes.push({ jointId: rect.id as string, departamentoId: dept.id, nombre: dept.nombre, x });
+    const totalW = Math.max(this.lanes.length * (LANE_WIDTH + LANE_GAP), 900);
+    this.paper.setDimensions(totalW, this.laneHeight);
+  }
+
+  private recalcularAlturaCarriles(): void {
+    let maxBottom = MIN_LANE_HEIGHT;
+    this.graph.getElements().forEach(el => {
+      if ((el as any).prop('esCarril')) return;
+      const pos  = el.position();
+      const size = el.size();
+      maxBottom = Math.max(maxBottom, pos.y + size.height + 100);
+    });
+    if (maxBottom <= this.laneHeight) return;
+    this.laneHeight = maxBottom;
+    this.graph.getElements().forEach(el => {
+      if (!(el as any).prop('esCarril')) return;
+      el.resize(LANE_WIDTH, this.laneHeight, { silent: true });
+    });
+    const totalW = Math.max(this.lanes.length * (LANE_WIDTH + LANE_GAP), 900);
+    this.paper.setDimensions(totalW, this.laneHeight);
+  }
+
+  private findLaneByX(x: number): LaneState | null {
+    return this.lanes.find(l => x >= l.x && x < l.x + LANE_WIDTH) ?? null;
+  }
+
+  private snapNodoEnCarril(el: joint.dia.Element): void {
+    const pos  = el.position();
+    const size = el.size();
+    const lane = this.findLaneByX(pos.x + size.width / 2);
+    if (!lane) return;
+
+    const margin = 8;
+    const newX = Math.max(lane.x + margin, Math.min(pos.x, lane.x + LANE_WIDTH - size.width - margin));
+    const newY = Math.max(LANE_HEADER + margin, pos.y);
+
+    if (newX !== pos.x || newY !== pos.y) {
+      el.position(newX, newY, { silent: true });
+    }
+
+    // Expandir carriles si el nodo se acerca al borde inferior
+    if (newY + size.height + 80 > this.laneHeight) {
+      this.recalcularAlturaCarriles();
+    }
+
+    // Actualizar departamentoId en el nodo lógico
+    const tempId = this.idMap.get(el.id as string);
+    if (tempId) {
+      const nodo = this.nodos.find(n => n.tempId === tempId);
+      if (nodo) nodo.departamentoId = lane.departamentoId;
+      if (this.selectedNodo?.tempId === tempId) {
+        this.modalDepartamentoId = lane.departamentoId;
+      }
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Carga desde backend
+  // ──────────────────────────────────────────────────────────────────────────
+
+  private cargarDiagramaExistente(): void {
+    if (!this.politicaId) return;
+    this.subs.add(
+      this.politicaSvc.getDiagrama(this.politicaId).subscribe({
+        next: (resp: any) => {
+          const nodos        = resp?.nodos        ?? resp?.data?.nodos        ?? [];
+          const transiciones = resp?.transiciones ?? resp?.data?.transiciones ?? [];
+          if (nodos.length > 0) this.reconstruirDesdeBackend(nodos, transiciones);
+          // else: lienzo en blanco, usuario agrega carriles manualmente
+        },
+        error: () => { /* lienzo en blanco */ },
+      }),
+    );
+  }
+
+  private reconstruirDesdeBackend(nodosRaw: any[], transicionesRaw: any[]): void {
+    this.nodos = [];
+    this.transiciones = [];
+    this.idMap.clear();
+    this.elementMap.clear();
+    this.graph.clear();
+    this.lanes = [];
+
+    // Reconstruir carriles en el mismo orden izquierda→derecha que tenían al guardar,
+    // ordenando cada departamento por la posicionX mínima de sus nodos.
+    const deptMinX = new Map<string, number>();
+    nodosRaw.forEach((n: any) => {
+      if (n.departamentoId) {
+        const prev = deptMinX.get(n.departamentoId) ?? Infinity;
+        deptMinX.set(n.departamentoId, Math.min(prev, n.posicionX ?? 100));
+      }
+    });
+    Array.from(deptMinX.entries())
+      .sort((a, b) => a[1] - b[1])
+      .forEach(([deptId]) => {
+        const dept = this.departamentos.find(d => d.id === deptId);
+        if (dept) this.insertarCarril(dept);
+      });
+
+    const tempIdByRealId = new Map<string, string>();
+
+    nodosRaw.forEach((n: any) => {
+      const tempId = `node-${++this.tempCounter}`;
+      tempIdByRealId.set(n.id, tempId);
+      const tipo = (n.tipo ?? 'TAREA') as TipoNodo;
+      const x = n.posicionX ?? 100;
+      const y = n.posicionY ?? 150;
+      const el = crearNodoShape(tipo, n.nombre ?? '', x, y);
+      el.prop('tempId', tempId);
+      this.graph.addCell(el);
+      this.idMap.set(el.id as string, tempId);
+      this.elementMap.set(tempId, el);
+      this.nodos.push({ tempId, jointId: el.id as string, tipo, nombre: n.nombre ?? '',
+                        departamentoId: n.departamentoId, formularioId: n.formularioId ?? null,
+                        posicionX: x, posicionY: y });
+    });
+
+    transicionesRaw.forEach((t: any) => {
+      const srcTemp = tempIdByRealId.get(t.nodoOrigenId);
+      const tgtTemp = tempIdByRealId.get(t.nodoDestinoId);
+      if (!srcTemp || !tgtTemp) return;
+      const elSrc = this.elementMap.get(srcTemp);
+      const elTgt = this.elementMap.get(tgtTemp);
+      if (!elSrc || !elTgt) return;
+      const tipo = (t.tipo ?? 'LINEAL') as TipoTransicion;
+      const link = crearLink(t.etiqueta ?? undefined, tipo);
+      link.source(elSrc);
+      link.target(elTgt);
+      this.graph.addCell(link);
+      this.transiciones.push({ jointId: link.id as string, nodoOrigenTempId: srcTemp,
+                                nodoDestinoTempId: tgtTemp, tipo, etiqueta: t.etiqueta });
+    });
+    this.recalcularAlturaCarriles();
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Drag & Drop desde paleta
+  // ──────────────────────────────────────────────────────────────────────────
+
+  onDragStart(event: DragEvent, tipo: TipoNodo): void {
+    event.dataTransfer!.setData('tipo', tipo);
+  }
+
+  private onDrop(event: DragEvent): void {
+    event.preventDefault();
+    const tipo = event.dataTransfer?.getData('tipo') as TipoNodo;
+    if (!tipo) return;
+    const rect  = this.canvasRef.nativeElement.getBoundingClientRect();
+    const scale = this.paper.scale();
+    const x = (event.clientX - rect.left) / scale.sx;
+    const y = (event.clientY - rect.top)  / scale.sy;
+    const lane = this.findLaneByX(x);
+    if (!lane) return; // solo se puede soltar dentro de un carril
+    this.agregarNodo(tipo, x, y, lane.departamentoId);
+  }
+
+  agregarNodo(tipo: TipoNodo, x = 100, y = 150, departamentoId: string | null = null): void {
+    const tempId = `node-${++this.tempCounter}`;
+    const nombre = tipo === 'INICIO' ? 'Inicio' : tipo === 'FIN' ? 'Fin' : '';
+    const el = crearNodoShape(tipo, nombre, x, y);
+    el.prop('tempId', tempId);
+    this.graph.addCell(el);
+    this.idMap.set(el.id as string, tempId);
+    this.elementMap.set(tempId, el);
+    this.nodos.push({ tempId, jointId: el.id as string, tipo, nombre,
+                      departamentoId, formularioId: null, posicionX: x, posicionY: y });
+    this.publicarEvento({ tipo: 'AGREGAR_NODO', tempId, tipoNodo: tipo });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Eventos del paper
+  // ──────────────────────────────────────────────────────────────────────────
+
+  private onElementClick(view: joint.dia.ElementView): void {
+    if ((view.model as any).prop('esCarril')) return;
+    const tempId = this.idMap.get(view.model.id as string);
+    if (!tempId) return;
+    this.selectedNodo       = this.nodos.find(n => n.tempId === tempId) ?? null;
+    this.selectedTransicion = null;
+    if (this.selectedNodo) {
+      this.modalNombre         = this.selectedNodo.nombre;
+      this.modalDepartamentoId = this.selectedNodo.departamentoId ?? '';
+      this.modalFormularioId   = this.selectedNodo.formularioId  ?? '';
+      if (this.selectedNodo.tipo === 'TAREA' && this.selectedNodo.departamentoId) {
+        this.cargarFormularios(this.selectedNodo.departamentoId);
+      } else {
+        this.formularios.set([]);
+      }
+    }
+  }
+
+  private onLinkConnect(view: { model: joint.dia.Link }): void {
+    const link  = view.model;
+    const srcId = link.source().id as string;
+    const tgtId = link.target().id as string;
+    const srcT  = this.idMap.get(srcId);
+    const tgtT  = this.idMap.get(tgtId);
+    if (!srcT || !tgtT) return;
+
+    const srcNodo = this.nodos.find(n => n.tempId === srcT);
+    let tipo: TipoTransicion = 'LINEAL';
+    let etiqueta: string | undefined;
+
+    if (srcNodo?.tipo === 'DECISION') {
+      tipo = 'ALTERNATIVA';
+      // Contar cuántas ALTERNATIVA ya existen desde este DECISION
+      const yaExistentes = this.transiciones.filter(
+        t => t.nodoOrigenTempId === srcT && t.tipo === 'ALTERNATIVA',
+      ).length;
+      etiqueta = yaExistentes === 0 ? 'Aprobado' : yaExistentes === 1 ? 'Rechazado' : `Opción ${yaExistentes + 1}`;
+
+      // Aplicar color y etiqueta visual al link
+      link.attr('line/stroke', '#f59e0b');
+      link.label(0, {
+        attrs: {
+          text: { text: etiqueta, fontSize: 11, fill: '#374151', fontWeight: '600' },
+          rect: { fill: '#fff', stroke: '#e5e7eb', strokeWidth: 1, rx: 4, ry: 4 },
+        },
+        position: { distance: 0.5 },
+      });
+    } else if (srcNodo?.tipo === 'FORK' || srcNodo?.tipo === 'JOIN') {
+      tipo = 'PARALELA';
+      link.attr('line/stroke', '#8b5cf6');
+    }
+
+    this.transiciones.push({
+      jointId: link.id as string,
+      nodoOrigenTempId: srcT,
+      nodoDestinoTempId: tgtT,
+      tipo,
+      etiqueta,
+    });
+    this.publicarEvento({ tipo: 'AGREGAR_TRANSICION', srcT, tgtT });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Modal nodo
+  // ──────────────────────────────────────────────────────────────────────────
+
+  abrirModalNodo(): void {
+    if (this.selectedNodo) this.modoModal.set('nodo');
+  }
+
+  guardarModalNodo(): void {
+    if (!this.selectedNodo) return;
+    this.selectedNodo.nombre         = this.modalNombre;
+    this.selectedNodo.departamentoId = this.modalDepartamentoId || null;
+    this.selectedNodo.formularioId   = this.modalFormularioId   || null;
+    const el = this.elementMap.get(this.selectedNodo.tempId);
+    if (el) el.attr('label/text', this.modalNombre);
+  }
+
+  onDepartamentoChange(): void {
+    this.guardarModalNodo();
+    this.modalFormularioId = '';
+    if (this.selectedNodo?.tipo === 'TAREA' && this.modalDepartamentoId) {
+      this.cargarFormularios(this.modalDepartamentoId);
+    } else {
+      this.formularios.set([]);
+    }
+  }
+
+  private cargarFormularios(departamentoId: string): void {
+    this.subs.add(
+      this.formularioSvc.list(departamentoId).subscribe({
+        next: (list) => this.formularios.set(list ?? []),
+        error: () => this.formularios.set([]),
+      }),
+    );
+  }
+
+  cerrarModal(): void { this.modoModal.set(null); }
+
+  // Transición
+  cambiarTipoTransicion(tipo: TipoTransicion): void {
+    if (!this.selectedTransicion) return;
+    this.selectedTransicion.tipo = tipo;
+    const link = this.graph.getCell(this.selectedTransicion.jointId) as joint.dia.Link;
+    if (link) {
+      const col = tipo === 'ALTERNATIVA' ? '#f59e0b' : tipo === 'PARALELA' ? '#8b5cf6' : '#6b7280';
+      link.attr('line/stroke', col);
+    }
+  }
+
+  actualizarEtiqueta(etiqueta: string): void {
+    if (!this.selectedTransicion) return;
+    this.selectedTransicion.etiqueta = etiqueta;
+    const link = this.graph.getCell(this.selectedTransicion.jointId) as joint.dia.Link;
+    if (link && etiqueta) {
+      link.label(0, {
+        attrs: { text: { text: etiqueta, fontSize: 11, fill: '#374151', fontWeight: '600' },
+                 rect: { fill: '#fff', stroke: '#e5e7eb', rx: 3, ry: 3 } },
+        position: { distance: 0.5 },
+      });
+    }
+  }
+
+  eliminarSeleccionado(): void {
+    if (this.selectedNodo) {
+      this.elementMap.get(this.selectedNodo.tempId)?.remove();
+      this.nodos        = this.nodos.filter(n => n.tempId !== this.selectedNodo!.tempId);
+      this.transiciones = this.transiciones.filter(
+        t => t.nodoOrigenTempId !== this.selectedNodo!.tempId
+          && t.nodoDestinoTempId !== this.selectedNodo!.tempId,
+      );
+      this.idMap.delete(this.selectedNodo.jointId);
+      this.elementMap.delete(this.selectedNodo.tempId);
+      this.selectedNodo = null;
+    } else if (this.selectedTransicion) {
+      this.graph.getCell(this.selectedTransicion.jointId)?.remove();
+      this.transiciones     = this.transiciones.filter(t => t.jointId !== this.selectedTransicion!.jointId);
+      this.selectedTransicion = null;
+    }
+    this.publicarEvento({ tipo: 'ELIMINAR_NODO' });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // IA
+  // ──────────────────────────────────────────────────────────────────────────
+
+  abrirModalIa(): void { this.iaError = ''; this.modoModal.set('ia'); }
+
+  iniciarGrabacionIa(): void {
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      this.iaError = 'Tu navegador no soporta reconocimiento de voz. Usa Chrome.';
       return;
     }
 
-    this.mostrandoSelectorCarril = true;
-    this.cdr.detectChanges();
-  }
-
-  seleccionarDepartamento(dept: Departamento): void {
-    this.ngZone.run(async () => {
-      if (!this.carriSeleccionado) return;
-
-      const carrilId = this.carriSeleccionado.id;
-      const carrilNombre = dept.nombre;
-
-      const modeling = this.get('modeling');
-      if (modeling) {
-        // Guardar nombre + departamentoId en el businessObject
-        modeling.updateProperties(this.carriSeleccionado, { 
-          name: dept.nombre,
-          departamentoId: dept.id
-        });
-        
-        // También guardar en la variable de referencia para que abrirModalTarea lo encuentre
-        if (this.carriSeleccionado?.businessObject) {
-          this.carriSeleccionado.businessObject.departamentoId = dept.id;
-        }
-      }
-
-      // Guardar relación en backend
-      if (this.politicaId) {
-        try {
-          await firstValueFrom(this.tareaService.guardarRelacionCarril(this.politicaId, {
-            carrilId,
-            carrilNombre,
-            departamentoId: dept.id,
-            departamentoNombre: dept.nombre
-          }));
-          console.log('Relación carril-departamento guardada en backend');
-        } catch (error) {
-          console.error('Error al guardar relación carril-departamento:', error);
-          // No bloqueamos el flujo si falla el guardado
-        }
-      }
-
-      this.cerrarSelectorCarril();
-      this.cdr.detectChanges();
-    });
-  }
-
-  cancelarSelectorCarril(): void {
-    this.ngZone.run(() => {
-      if (this.esNuevoCarril && this.carriSeleccionado) {
-        const modeling = this.get('modeling');
-        if (modeling) {
-          modeling.removeShape(this.carriSeleccionado);
-        }
-      }
-      this.cerrarSelectorCarril();
-      this.cdr.detectChanges();
-    });
-  }
-
-  private cerrarSelectorCarril(): void {
-    this.mostrandoSelectorCarril = false;
-    this.departamentosDisponibles = [];
-    this.carriSeleccionado = null;
-    this.esNuevoCarril = false;
-  }
-
-  // ===== MODAL TAREA (NOMBRE + DEPARTAMENTO + FORMULARIO) =====
-  private async abrirModalTarea(taskElement: any): Promise<void> {
-    this.tareaSeleccionada = taskElement;
-    this.nombreTarea = taskElement?.businessObject?.name || '';
-    this.departamentoSeleccionadoId = null;
-    this.formularioSeleccionadoId = null;
-    this.formulariosFiltrados = [];
-
-    // Cargar todos los formularios disponibles
-    try {
-      const allForms = await firstValueFrom(this.formularioService.list());
-      this.formulariosFiltrados = Array.isArray(allForms) ? allForms : [];
-    } catch {
-      this.formulariosFiltrados = this.formularios.length ? this.formularios : [];
+    if (this.iaEscuchando()) {
+      this.iaRecognition?.stop();
+      return;
     }
 
-    if (this.politicaId) {
-      try {
-        const nodo = await firstValueFrom(
-          this.tareaService.obtenerNodoPorElementoYPolitica(taskElement.id, this.politicaId)
-        );
-        if (nodo?.departamentoId) {
-          this.departamentoSeleccionadoId = nodo.departamentoId;
-        }
-        if (nodo?.formularioId) {
-          this.formularioSeleccionadoId = nodo.formularioId;
-        }
-      } catch {
-        // Sin nodo persistido aún o error de red
+    this.iaRecognition = new SpeechRecognitionCtor();
+    this.iaRecognition.lang = 'es-ES';
+    this.iaRecognition.continuous = true;
+    this.iaRecognition.interimResults = true;
+
+    this.iaEscuchando.set(true);
+
+    this.iaRecognition.onresult = (event: any) => {
+      let texto = '';
+      for (let i = 0; i < event.results.length; i++) {
+        texto += event.results[i][0].transcript;
       }
-    }
+      this.iaDescripcion = texto;
+    };
 
-    this.mostrandoModalTarea = true;
-    this.cdr.detectChanges();
+    this.iaRecognition.onerror = () => { this.iaEscuchando.set(false); };
+    this.iaRecognition.onend   = () => { this.iaEscuchando.set(false); };
+
+    this.iaRecognition.start();
   }
 
-  onDepartamentoChange(resetFormulario = true): void {
-    if (resetFormulario) {
-      this.formularioSeleccionadoId = null;
-    }
-    // Recargar todos los formularios (sin filtrar por departamento)
-    this.formularioService.list().subscribe({
-      next: (formularios) => {
-        this.formulariosFiltrados = Array.isArray(formularios) ? formularios : [];
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.formulariosFiltrados = this.formularios.length ? this.formularios : [];
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  guardarTarea(): void {
-    this.ngZone.run(async () => {
-      if (!this.tareaSeleccionada || !this.politicaId) return;
-
-      if (this.formularioSeleccionadoId && !this.departamentoSeleccionadoId) {
-        this.mostrarMensaje('Seleccione un departamento para asignar un formulario', true);
-        return;
-      }
-
-      const modeling = this.get('modeling');
-      if (modeling) {
-        modeling.updateProperties(this.tareaSeleccionada, { name: this.nombreTarea });
-      }
-
-      try {
-        await firstValueFrom(
-          this.tareaService.configurarNodoPorElementId(this.tareaSeleccionada.id, {
-            politicaId: this.politicaId,
-            nombre: this.nombreTarea,
-            departamentoId: this.departamentoSeleccionadoId,
-            formularioId: this.formularioSeleccionadoId,
-          })
-        );
-        this.mostrarMensaje(`Tarea "${this.nombreTarea}" guardada`);
-      } catch (err: any) {
-        console.error('Error al guardar configuración de tarea:', err);
-        this.mostrarMensaje(err?.error?.message ?? 'Error al guardar la tarea', true);
-      }
-
-      this.cerrarModalTarea();
-      this.cdr.detectChanges();
-    });
-  }
-
-  cancelarModalTarea(): void {
-    this.cerrarModalTarea();
-  }
-
-  private cerrarModalTarea(): void {
-    this.mostrandoModalTarea = false;
-    this.nombreTarea = '';
-    this.departamentoSeleccionadoId = null;
-    this.formularioSeleccionadoId = null;
-    this.formulariosFiltrados = [];
-    this.tareaSeleccionada = null;
-  }
-
-  // ===== MÉTODOS LEGACY (MANTENER POR COMPATIBILIDAD) =====
-  private abrirModalFormulario(taskElement: any): Promise<void> {
-    return this.abrirModalTarea(taskElement);
-  }
-
-  asignarFormulario(formulario: Formulario): void {
-    this.ngZone.run(() => {
-      if (!this.tareaSeleccionada) return;
-      this.formularioSeleccionadoId = formulario.id;
-      this.guardarTarea();
-    });
-  }
-
-  cancelarModalFormulario(): void {
-    this.cerrarModalTarea();
-  }
-
-  // ===== MODAL DECISIÓN (CONDICIONES + TIPO DE FLUJO) =====
-  private abrirModalDecision(gatewayElement: any): void {
-    this.decisionSeleccionada = gatewayElement;
-    this.decisionEtiqueta = gatewayElement?.businessObject?.name || '';
-    this.tipoFlujo = gatewayElement?.businessObject?.tipoFlujo || 'SECUENCIAL';
-
-    // Obtener las salidas (flechas) del gateway
-    const outgoing: any[] = gatewayElement?.businessObject?.outgoing || [];
-    this.decisionCondiciones = outgoing.map((flow: any) => ({
-      id: flow.id,
-      salida: flow.name || '',
-    }));
-
-    this.mostrandoModalDecision = true;
-    this.cdr.detectChanges();
-  }
-
-  guardarDecision(): void {
-    this.ngZone.run(async () => {
-      if (!this.decisionSeleccionada) return;
-
-      const modeling = this.get('modeling');
-      const elementRegistry = this.get('elementRegistry');
-
-      // Actualizar etiqueta del gateway
-      if (modeling) {
-        modeling.updateProperties(this.decisionSeleccionada, { 
-          name: this.decisionEtiqueta,
-          tipoFlujo: this.tipoFlujo
-        });
-      }
-
-      // Actualizar etiquetas de las flechas (flows)
-      this.decisionCondiciones.forEach((cond) => {
-        const flow = elementRegistry?.get?.(cond.id);
-        if (flow && modeling) {
-          modeling.updateProperties(flow, { name: cond.salida });
-        }
-      });
-
-      // Guardar tipo de flujo en backend (elementId + politicaId)
-      try {
-        if (!this.politicaId) {
-          throw new Error('politicaId no disponible');
-        }
-        await firstValueFrom(
-          this.tareaService.actualizarTipoFlujo(this.decisionSeleccionada.id, this.tipoFlujo, this.politicaId)
-        );
-        this.mostrarMensaje(`Decisión guardada con tipo: ${this.tipoFlujo}`);
-      } catch (err: any) {
-        console.error('Error al guardar tipo de flujo:', err);
-        this.mostrarMensaje('Decisión guardada localmente (tipo de flujo pendiente de sincronizar)', false, 2000);
-      }
-
-      this.cerrarModalDecision();
-      this.cdr.detectChanges();
-    });
-  }
-
-  cancelarModalDecision(): void {
-    this.cerrarModalDecision();
-  }
-
-  private cerrarModalDecision(): void {
-    this.mostrandoModalDecision = false;
-    this.decisionEtiqueta = '';
-    this.tipoFlujo = 'SECUENCIAL';
-    this.decisionCondiciones = [];
-    this.decisionSeleccionada = null;
-  }
-
-  // ===== MODAL EDITAR NOMBRE =====
-  private abrirModalNombre(nodo: any): void {
-    this.nodoSeleccionado = nodo;
-    this.nombreNodo = nodo?.businessObject?.name || '';
-    this.mostrandoModalNombre = true;
-    this.cdr.detectChanges();
-  }
-
-  guardarNombre(): void {
-    this.ngZone.run(() => {
-      if (!this.nodoSeleccionado) return;
-
-      const modeling = this.get('modeling');
-      if (modeling) {
-        modeling.updateProperties(this.nodoSeleccionado, { name: this.nombreNodo });
-      }
-
-      this.cerrarModalNombre();
-      this.cdr.detectChanges();
-    });
-  }
-
-  cancelarModalNombre(): void {
-    this.cerrarModalNombre();
-  }
-
-  private cerrarModalNombre(): void {
-    this.mostrandoModalNombre = false;
-    this.nombreNodo = '';
-    this.nodoSeleccionado = null;
-  }
-
-  // ===== HELPERS =====
-  private obtenerNombresCarrilesDelDiagrama(): string[] {
-    try {
-      const registry = this.get('elementRegistry');
-      const elements = registry?.getAll?.() ?? [];
-      const participants = elements.filter((e: any) => e.type === 'bpmn:Participant');
-      return participants
-        .map((p: any) => p?.businessObject?.name?.trim() || '')
-        .filter((name: string) => name.length > 0);
-    } catch {
-      return [];
-    }
-  }
-
-  private obtenerCarrilDeTarea(taskElement: any): any { // eslint-disable-line @typescript-eslint/no-unused-vars
-    try {
-      let parent = taskElement?.parent;
-      while (parent) {
-        if (parent.type === 'bpmn:Lane' || parent.type === 'bpmn:Participant') {
-          return parent;
-        }
-        parent = parent?.parent;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  // ===== OPERACIONES ESTÁNDAR =====
-  private async importSafeXml(xml: string): Promise<void> {
-    if (!this.modeler) return;
-    try {
-      await this.modeler.importXML(xml);
-    } catch {
-      await this.modeler.importXML(this.blankDiagram());
-    }
-    this.autoLayout();
-  }
-
-  /**
-   * Flechas BPMN (elementId origen/destino) para persistir transiciones junto al XML.
-   * Incluye SequenceFlow (línea continua) y MessageFlow (línea punteada entre carriles).
-   */
-  private extraerTransicionesDelModelo(): TransicionDiagramaGuardado[] {
-    const registry = this.get('elementRegistry');
-    const all = registry?.getAll?.() ?? [];
-    const flows = all.filter((el: any) =>
-      el?.type === 'bpmn:SequenceFlow' || el?.type === 'bpmn:MessageFlow'
-    );
-    return flows.map((conn: any) => {
-      const bo = conn?.businessObject;
-      const srcRef = bo?.sourceRef;
-      const tgtRef = bo?.targetRef;
-      const srcId = typeof srcRef === 'object' && srcRef?.id ? srcRef.id : String(srcRef ?? '');
-      const tgtId = typeof tgtRef === 'object' && tgtRef?.id ? tgtRef.id : String(tgtRef ?? '');
-      const origenEl = srcId ? registry?.get?.(srcId) : null;
-      let tipoOrigen = 'SECUENCIAL';
-      if (origenEl?.type === 'bpmn:ParallelGateway') {
-        tipoOrigen = 'PARALELO';
-      } else if (origenEl?.type === 'bpmn:ExclusiveGateway' || origenEl?.type === 'bpmn:InclusiveGateway') {
-        tipoOrigen = 'ALTERNATIVO';
-      }
-      const etiqueta = bo?.name && String(bo.name).trim() ? String(bo.name).trim() : null;
-      return {
-        nodoOrigenId: srcId,
-        nodoDestinoId: tgtId,
-        etiqueta,
-        tipo: tipoOrigen,
-      };
-    });
-  }
-
-  async guardar(): Promise<void> {
-    const politica = this.politica;
-    if (!politica || !this.modeler) return;
-    if (!this.validar()) return;
-
-    this.isSaving = true;
-    try {
-      const { xml } = await this.modeler.saveXML({ format: true });
-      if (!xml) {
-        this.isSaving = false;
-        window.alert('No se pudo exportar el XML');
-        return;
-      }
-
-      const transiciones = this.extraerTransicionesDelModelo();
-      this.politicaService.guardarDiagramaCompleto(politica.id, xml, transiciones).subscribe({
-        next: (_updated) => {
-          this.politica = { ...politica, diagramaJson: xml };
-          this.isSaving = false;
-          window.alert('Diagrama guardado');
+  generarConIa(): void {
+    if (!this.iaDescripcion.trim()) return;
+    this.iaCargando.set(true);
+    this.iaError = '';
+    const deptos = this.departamentos.map(d => ({ id: d.id, nombre: d.nombre }));
+    this.subs.add(
+      this.iaSvc.generarDiagramaJointJs(this.iaDescripcion, deptos).subscribe({
+        next: (resp) => {
+          console.log('[IA] Respuesta completa del backend:', resp);
+          console.log('[IA] nodos recibidos:', resp.nodos);
+          console.log('[IA] transiciones recibidas:', resp.transiciones);
+          this.iaCargando.set(false);
+          this.modoModal.set(null);
+          this.reconstruirDesdeIa(resp.nodos ?? [], resp.transiciones ?? []);
+          if (resp.advertencia) this.advertenciasValidacion = [resp.advertencia];
         },
         error: (err) => {
-          this.isSaving = false;
-          window.alert(err?.error?.message ?? 'No se pudo guardar');
+          console.error('[IA] Error al generar diagrama:', err);
+          this.iaCargando.set(false);
+          this.iaError = err?.error?.message ?? 'Error al generar diagrama con IA';
         },
+      }),
+    );
+  }
+
+  private reconstruirDesdeIa(nodosIa: any[], transicionesIa: any[]): void {
+    console.log('[IA] reconstruirDesdeIa — nodos:', nodosIa.length, '| transiciones:', transicionesIa.length);
+    this.nodos = [];
+    this.transiciones = [];
+    this.idMap.clear();
+    this.elementMap.clear();
+    this.graph.clear();
+    this.lanes = [];
+
+    const deptByNombre = new Map(this.departamentos.map(d => [d.nombre.toLowerCase(), d.id]));
+
+    // Reconstruir carriles a partir de los departamentos en los nodos de IA
+    const deptVistos = new Set<string>();
+    nodosIa.forEach(n => {
+      const deptoId = n.departamentoId ?? (n.departamento ? deptByNombre.get(n.departamento?.toLowerCase()) : null);
+      if (deptoId && !deptVistos.has(deptoId)) {
+        deptVistos.add(deptoId);
+        const dept = this.departamentos.find(d => d.id === deptoId);
+        if (dept) this.insertarCarril(dept);
+      }
+    });
+
+    const layoutNodos = nodosIa.map(n => ({
+      tempId: n.tempId,
+      tipo: (n.tipo ?? 'TAREA') as TipoNodo,
+      departamentoId: n.departamentoId ?? (n.departamento ? deptByNombre.get(n.departamento?.toLowerCase()) : null),
+    }));
+    const layout = calcularLayout(
+      layoutNodos,
+      transicionesIa.map(t => ({ nodoOrigenTempId: t.origen, nodoDestinoTempId: t.destino })),
+      this.lanes.map(l => ({ id: l.departamentoId, nombre: l.nombre })),
+    );
+
+    nodosIa.forEach(n => {
+      const tipo    = (n.tipo ?? 'TAREA') as TipoNodo;
+      const deptoId = n.departamentoId ?? (n.departamento ? deptByNombre.get(n.departamento?.toLowerCase()) : null);
+      const pos     = layout.positions.get(n.tempId) ?? { x: 100, y: 150 };
+      const el      = crearNodoShape(tipo, n.nombre ?? '', pos.x, pos.y);
+      el.prop('tempId', n.tempId);
+      this.graph.addCell(el);
+      this.idMap.set(el.id as string, n.tempId);
+      this.elementMap.set(n.tempId, el);
+      this.nodos.push({ tempId: n.tempId, jointId: el.id as string, tipo, nombre: n.nombre ?? '',
+                        departamentoId: deptoId ?? null, formularioId: n.formularioId ?? null,
+                        posicionX: pos.x, posicionY: pos.y });
+    });
+
+    transicionesIa.forEach(t => {
+      console.log('[IA] transicion:', t.origen, '→', t.destino, '| src encontrado:', !!this.elementMap.get(t.origen), '| tgt encontrado:', !!this.elementMap.get(t.destino));
+      const elSrc = this.elementMap.get(t.origen);
+      const elTgt = this.elementMap.get(t.destino);
+      if (!elSrc || !elTgt) return;
+      const tipo = (t.tipo ?? 'LINEAL') as TipoTransicion;
+      const link = crearLink(t.etiqueta ?? undefined, tipo);
+      link.source(elSrc);
+      link.target(elTgt);
+      this.graph.addCell(link);
+      this.transiciones.push({ jointId: link.id as string, nodoOrigenTempId: t.origen,
+                                nodoDestinoTempId: t.destino, tipo, etiqueta: t.etiqueta });
+    });
+    this.recalcularAlturaCarriles();
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Auto-layout
+  // ──────────────────────────────────────────────────────────────────────────
+
+  autoOrganizar(): void {
+    const layout = calcularLayout(
+      this.nodos.map(n => ({ tempId: n.tempId, tipo: n.tipo, departamentoId: n.departamentoId })),
+      this.transiciones.map(t => ({ nodoOrigenTempId: t.nodoOrigenTempId, nodoDestinoTempId: t.nodoDestinoTempId })),
+      this.lanes.map(l => ({ id: l.departamentoId, nombre: l.nombre })),
+    );
+    layout.positions.forEach(({ x, y }, tempId) => {
+      const el = this.elementMap.get(tempId);
+      if (el) el.position(x, y);
+      const n = this.nodos.find(nn => nn.tempId === tempId);
+      if (n) { n.posicionX = x; n.posicionY = y; }
+    });
+    this.recalcularAlturaCarriles();
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Guardar
+  // ──────────────────────────────────────────────────────────────────────────
+
+  guardar(): void {
+    // Sincronizar posiciones
+    this.nodos.forEach(n => {
+      const el = this.elementMap.get(n.tempId);
+      if (el) { const p = el.position(); n.posicionX = p.x; n.posicionY = p.y; }
+    });
+
+    const resultado = validarDiagrama(this.nodos, this.transiciones);
+    this.erroresValidacion     = resultado.errores;
+    this.advertenciasValidacion = resultado.advertencias;
+    if (!resultado.valido) return;
+
+    this.guardando.set(true);
+    const payload = {
+      datosDiagramaJson: JSON.stringify(this.graph.toJSON()),
+      nodos: this.nodos.map(n => ({
+        id: null, tempId: n.tempId, tipo: n.tipo, nombre: n.nombre,
+        departamentoId: n.departamentoId ?? null, formularioId: n.formularioId ?? null,
+        posicionX: n.posicionX, posicionY: n.posicionY,
+      })),
+      transiciones: this.transiciones.map(t => ({
+        id: null, nodoOrigenTempId: t.nodoOrigenTempId, nodoDestinoTempId: t.nodoDestinoTempId,
+        tipo: t.tipo, etiqueta: t.etiqueta ?? null, condicion: null,
+      })),
+    };
+
+    this.subs.add(
+      this.politicaSvc.guardarDiagramaJointJs(this.politicaId, payload).subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.mensajeGuardado = 'Diagrama guardado';
+          setTimeout(() => (this.mensajeGuardado = ''), 3000);
+        },
+        error: (err) => {
+          this.guardando.set(false);
+          this.erroresValidacion = [err?.error?.message ?? 'Error al guardar'];
+        },
+      }),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Exportación
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async exportarPng(): Promise<void> {
+    this.exportando.set(true);
+    const c = await html2canvas(this.canvasRef.nativeElement);
+    const a = document.createElement('a');
+    a.href = c.toDataURL('image/png');
+    a.download = `diagrama-${this.politicaId}.png`;
+    a.click();
+    this.exportando.set(false);
+  }
+
+  async exportarPdf(): Promise<void> {
+    this.exportando.set(true);
+    const c   = await html2canvas(this.canvasRef.nativeElement);
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [c.width, c.height] });
+    pdf.addImage(c.toDataURL('image/png'), 'PNG', 0, 0, c.width, c.height);
+    pdf.save(`diagrama-${this.politicaId}.pdf`);
+    this.exportando.set(false);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // WebSocket
+  // ──────────────────────────────────────────────────────────────────────────
+
+  private conectarWebSocket(): void {
+    const token = localStorage.getItem('token') ?? '';
+    this.stompClient = new Client({
+      webSocketFactory:  () => new SockJS(environment.wsUrl),
+      connectHeaders:    { Authorization: `Bearer ${token}` },
+      reconnectDelay:    5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+    this.stompClient.onConnect = () => {
+      this.stompClient!.subscribe(`/topic/diagrama/${this.politicaId}`, (msg) => {
+        try {
+          const ev = JSON.parse(msg.body);
+          if (ev.tipo === 'DIAGRAMA_GUARDADO') this.cargarDiagramaExistente();
+        } catch { /* ignorar */ }
       });
-    } catch {
-      this.isSaving = false;
-      window.alert('No se pudo exportar el diagrama');
+    };
+    this.stompClient.activate();
+  }
+
+  private publicarEvento(evento: object): void {
+    if (this.stompClient?.connected) {
+      this.stompClient.publish({
+        destination: `/app/diagrama/${this.politicaId}/evento`,
+        body:        JSON.stringify(evento),
+      });
     }
   }
 
-  autoLayout(): void {
-    const canvas = this.get('canvas');
-    if (canvas) canvas.zoom('fit-viewport');
-  }
+  // ──────────────────────────────────────────────────────────────────────────
+  // Helpers de template
+  // ──────────────────────────────────────────────────────────────────────────
 
-  zoomIn(): void {
-    const canvas = this.get('canvas');
-    if (!canvas) return;
-    const current = Number(canvas.zoom?.() ?? 1);
-    if (Number.isFinite(current)) canvas.zoom(current * 1.1);
-  }
+  readonly tiposNodo: TipoNodo[] = ['INICIO', 'TAREA', 'DECISION', 'FIN', 'FORK', 'JOIN'];
+  readonly tiposTransicion: TipoTransicion[] = ['LINEAL', 'ALTERNATIVA', 'PARALELA'];
 
-  zoomOut(): void {
-    const canvas = this.get('canvas');
-    if (!canvas) return;
-    const current = Number(canvas.zoom?.() ?? 1);
-    if (Number.isFinite(current)) canvas.zoom(Math.max(0.2, current * 0.9));
-  }
-
-  resetZoom(): void {
-    const canvas = this.get('canvas');
-    if (canvas) canvas.zoom(1);
-  }
-
-  async exportarPNG(): Promise<void> {
-    if (!this.modeler) return;
-    const { svg } = await this.modeler.saveSVG();
-    if (!svg) return;
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      const pngUrl = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = pngUrl;
-      a.download = `diagrama-${this.politica?.id}.png`;
-      a.click();
+  nombreTipo(tipo: TipoNodo): string {
+    const m: Record<TipoNodo, string> = {
+      INICIO: 'Inicio', TAREA: 'Tarea', DECISION: 'Decisión',
+      FIN: 'Fin', FORK: 'Fork (paralelo)', JOIN: 'Join (paralelo)',
     };
-    img.src = url;
+    return m[tipo];
   }
 
-  async exportarPDF(): Promise<void> {
-    if (!this.modeler) return;
-    const { svg } = await this.modeler.saveSVG();
-    if (!svg) return;
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      const png = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-      const w = pdf.internal.pageSize.getWidth();
-      const h = pdf.internal.pageSize.getHeight();
-      pdf.addImage(png, 'PNG', 0, 0, w, h);
-      pdf.save(`diagrama-${this.politica?.id}.pdf`);
-    };
-    img.src = url;
-  }
-
-  // ===== CREAR NUEVO FORMULARIO =====
-  crearNuevoFormulario(): void {
-    // Mostrar mensaje informativo
-    this.mostrarMensaje('Por favor, crear formulario desde el módulo de Formularios y luego recargar esta página', false, 5000);
-  }
-
-  validar(): boolean {
-    const registry = this.get('elementRegistry');
-    const elements = registry?.getAll?.() ?? [];
-    const startCount = elements.filter((e: any) => e.type === 'bpmn:StartEvent').length;
-    const endCount = elements.filter((e: any) => e.type === 'bpmn:EndEvent').length;
-    if (!startCount || !endCount) {
-      window.alert('El diagrama debe tener al menos un nodo Inicio y un nodo Fin.');
-      return false;
-    }
-    window.alert('Diagrama válido.');
-    return true;
-  }
-
-  private toBpmnXml(value: string | null): string {
-    if (!value) return this.blankDiagram();
-    const v = value.trim();
-    if (v.startsWith('<?xml') || v.includes('<bpmn:definitions')) return v;
-    return this.blankDiagram();
-  }
-
-  private blankDiagram(): string {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC">
-  <bpmn:process id="Process_1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_1" />
-  </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="160" y="100" width="36" height="36" />
-      </bpmndi:BPMNShape>
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>`;
-  }
-
-  private get(name: string): any {
-    return (this.modeler as any)?.get?.(name);
+  getDeptNombre(id: string | null | undefined): string {
+    if (!id) return '—';
+    return this.departamentos.find(d => d.id === id)?.nombre ?? id;
   }
 }

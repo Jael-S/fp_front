@@ -11,8 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-// @ts-ignore
-import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
+import * as joint from '@joint/core';
 
 import { TramiteService } from '../../../core/services/tramite.service';
 import { PoliticaService } from '../../../core/services/politica.service';
@@ -47,8 +46,9 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
 
   readonly loading               = signal(false);
 
-  private viewer: any = null;
-  private diagramaXmlActual: string | null = null;
+  private graph: joint.dia.Graph | null = null;
+  private paper: joint.dia.Paper | null = null;
+  private diagramaJsonActual: string | null = null;
 
   // ── Ciclo de vida ────────────────────────────────────────────────────────────
 
@@ -68,7 +68,8 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.monitorService.disconnect();
-    try { this.viewer?.destroy(); } finally { this.viewer = null; }
+    this.paper = null;
+    this.graph = null;
   }
 
   // ── Cambio de política ───────────────────────────────────────────────────────
@@ -89,7 +90,6 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
     this.tramiteSeleccionado.set(id);
     this.tramiteStats.set(null);
     if (!id) {
-      // Volver a la vista general de política
       this.aplicarColoresGenerales(this.stats());
       return;
     }
@@ -108,12 +108,12 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
       monitor:  this.monitorService.getEstado(politicaId),
       tramites: this.tramiteService.list(0, 100, { politicaId }),
     }).subscribe({
-      next: async ({ politica, monitor, tramites }) => {
+      next: ({ politica, monitor, tramites }) => {
         this.stats.set(monitor);
         this.tramites.set(tramites.items ?? []);
-        this.diagramaXmlActual = politica.diagramaJson ?? null;
+        this.diagramaJsonActual = politica.diagramaJson ?? null;
         this.loading.set(false);
-        await this.renderizarDiagrama(this.diagramaXmlActual);
+        this.renderizarDiagrama(this.diagramaJsonActual);
         this.aplicarColoresGenerales(monitor);
         this.cdr.detectChanges();
         this.monitorService.watch(politicaId, () =>
@@ -130,7 +130,7 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
     this.monitorService.getEstadoTramite(tramiteId).subscribe({
       next: (data) => {
         this.tramiteStats.set(data);
-        this.limpiarOverlays();
+        this.limpiarColores();
         this.aplicarColoresTramite(data);
         this.cdr.detectChanges();
       },
@@ -149,7 +149,7 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
         if (this.tramiteSeleccionado()) {
           this.cargarTramite(this.tramiteSeleccionado());
         } else {
-          this.limpiarOverlays();
+          this.limpiarColores();
           this.aplicarColoresGenerales(monitor);
         }
         this.cdr.detectChanges();
@@ -158,82 +158,61 @@ export class MonitoreoComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // ── bpmn-js viewer ───────────────────────────────────────────────────────────
+  // ── Visor JointJS (lectura) ──────────────────────────────────────────────────
 
   private initViewer(): void {
-    this.viewer = new NavigatedViewer({ container: '#bpmn-monitor' });
+    const container = document.getElementById('bpmn-monitor');
+    if (!container) return;
+    this.graph = new joint.dia.Graph({}, { cellNamespace: joint.shapes });
+    this.paper = new joint.dia.Paper({
+      el: container,
+      model: this.graph,
+      width: container.offsetWidth || 900,
+      height: 480,
+      cellViewNamespace: joint.shapes,
+      interactive: false,
+      background: { color: '#f9fafb' },
+      gridSize: 1,
+    });
   }
 
-  private async renderizarDiagrama(xml: string | null): Promise<void> {
-    if (!this.viewer || !xml?.trim()) return;
+  private renderizarDiagrama(json: string | null): void {
+    if (!this.graph || !json?.trim()) return;
     try {
-      await this.viewer.importXML(xml);
-      (this.viewer.get('canvas') as any).zoom('fit-viewport');
-    } catch { /* XML inválido */ }
+      const data = JSON.parse(json);
+      this.graph.fromJSON(data);
+    } catch { /* JSON inválido o vacío */ }
   }
 
-  // Coloreo vista general (todos los trámites de la política)
+  // ── Coloreo ──────────────────────────────────────────────────────────────────
+
   private aplicarColoresGenerales(monitor: MonitorData | null): void {
     if (!monitor) return;
     for (const info of Object.values(monitor.nodos ?? {})) {
-      this.colorearNodo(info.elementId, info.estado);
-      if (info.tramitesActivos > 0) this.agregarBadge(info.elementId, info.tramitesActivos);
+      this.colorearCelda(info.elementId, this.colorGeneral(info.estado));
     }
   }
 
-  // Coloreo vista trámite (3 colores: verde=completado, amarillo=actual, gris=futuro)
   private aplicarColoresTramite(data: TramiteMonitorData): void {
     for (const [elementId, estado] of Object.entries(data.estadoNodos ?? {})) {
-      this.colorearNodoPorEstadoTramite(elementId, estado);
+      this.colorearCelda(elementId, this.colorTramite(estado));
     }
   }
 
-  private colorearNodo(elementId: string, estado: string): void {
-    try {
-      const element = (this.viewer.get('elementRegistry') as any).get(elementId);
-      if (!element) return;
-      const gfx = (this.viewer.get('canvas') as any).getGraphics(element) as SVGGElement;
-      const shape = gfx?.querySelector<SVGElement>(
-        '.djs-visual > rect, .djs-visual > circle, .djs-visual > polygon, .djs-visual > ellipse'
-      );
-      if (!shape) return;
-      const { fill, stroke } = this.colorGeneral(estado);
-      shape.setAttribute('fill', fill);
-      shape.setAttribute('stroke', stroke);
-      shape.setAttribute('stroke-width', '2.5');
-    } catch { /* ignorar */ }
+  private limpiarColores(): void {
+    // Volver a renderizar desde JSON restaura los colores originales
+    this.renderizarDiagrama(this.diagramaJsonActual);
   }
 
-  private colorearNodoPorEstadoTramite(elementId: string, estado: string): void {
-    try {
-      const element = (this.viewer.get('elementRegistry') as any).get(elementId);
-      if (!element) return;
-      const gfx = (this.viewer.get('canvas') as any).getGraphics(element) as SVGGElement;
-      const shape = gfx?.querySelector<SVGElement>(
-        '.djs-visual > rect, .djs-visual > circle, .djs-visual > polygon, .djs-visual > ellipse'
-      );
-      if (!shape) return;
-      const { fill, stroke } = this.colorTramite(estado);
-      shape.setAttribute('fill', fill);
-      shape.setAttribute('stroke', stroke);
-      shape.setAttribute('stroke-width', estado === 'EN_PROCESO' ? '3' : '2');
-    } catch { /* ignorar */ }
-  }
-
-  private agregarBadge(elementId: string, count: number): void {
-    try {
-      const overlays = this.viewer.get('overlays') as any;
-      overlays.remove({ element: elementId, type: 'monitor-count' });
-      overlays.add(elementId, 'monitor-count', {
-        position: { top: -14, right: -14 },
-        html: `<div class="bpmn-monitor-badge">${count}</div>`,
-      });
-    } catch { /* ignorar */ }
-  }
-
-  private limpiarOverlays(): void {
-    try { (this.viewer.get('overlays') as any).remove({ type: 'monitor-count' }); }
-    catch { /* ignorar */ }
+  private colorearCelda(elementId: string, { fill, stroke }: { fill: string; stroke: string }): void {
+    if (!this.graph) return;
+    const cell = this.graph.getCells().find(
+      c => c.prop('tempId') === elementId || c.id === elementId
+    );
+    if (!cell || !(cell instanceof joint.dia.Element)) return;
+    (cell as joint.dia.Element).attr('body/fill', fill);
+    (cell as joint.dia.Element).attr('body/stroke', stroke);
+    (cell as joint.dia.Element).attr('body/strokeWidth', 2.5);
   }
 
   private colorGeneral(estado: string): { fill: string; stroke: string } {

@@ -1,0 +1,167 @@
+<section class="card">
+  <h2>Reportes Dinámicos</h2>
+  <p class="ayuda">
+    Escriba o dicte qué reporte desea ver. La IA interpretará los datos, criterios y formato.
+  </p>
+
+  <div class="input-row">
+    <input
+      [(ngModel)]="instruccion"
+      placeholder="Ej: Quiero ver los trámites completados en mayo en Excel"
+      (keyup.enter)="interpretar()"
+    />
+    <button
+      type="button"
+      class="btn-mic"
+      [class.grabando]="grabando"
+      (click)="toggleVoz()"
+      [title]="grabando ? 'Detener grabación' : 'Hablar'"
+    >
+      <i class="fa-solid" [class.fa-microphone]="!grabando" [class.fa-stop]="grabando"></i>
+    </button>
+    <button type="button" class="btn-primary" (click)="interpretar()" [disabled]="cargando() || !instruccion.trim()">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      Interpretar
+    </button>
+  </div>
+
+  <div class="voz-indicator" *ngIf="grabando">
+    <span class="pulse"></span> Escuchando...
+  </div>
+
+  <p *ngIf="vozError" class="error">{{ vozError }}</p>
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <p *ngIf="cargando()" class="info"><i class="fa-solid fa-spinner fa-spin"></i> Procesando...</p>
+
+  <div *ngIf="interpretacion() as interp" class="resultado-interpretacion">
+    <h3>Interpretación</h3>
+
+    <div class="cards-interpretacion">
+      <div class="mini-card">
+        <div class="mini-card__icono datos"><i class="fa-solid fa-table-columns"></i></div>
+        <div class="mini-card__contenido">
+          <span class="mini-card__titulo">Datos solicitados</span>
+          <span class="mini-card__valor" *ngIf="interp.datos.length; else sinDatos">{{ interp.datos.join(', ') }}</span>
+          <ng-template #sinDatos><span class="mini-card__valor">Todos los disponibles</span></ng-template>
+        </div>
+      </div>
+
+      <div class="mini-card">
+        <div class="mini-card__icono criterios"><i class="fa-solid fa-filter"></i></div>
+        <div class="mini-card__contenido">
+          <span class="mini-card__titulo">Criterios</span>
+          <span class="mini-card__valor" *ngIf="criteriosKeys(interp.criterios).length; else sinCriterios">
+            <span *ngFor="let k of criteriosKeys(interp.criterios)">{{ k }}: {{ interp.criterios[k] }} &nbsp;</span>
+          </span>
+          <ng-template #sinCriterios><span class="mini-card__valor">Sin filtros</span></ng-template>
+        </div>
+      </div>
+
+      <div class="mini-card">
+        <div class="mini-card__icono formato"><i class="fa-solid fa-file-export"></i></div>
+        <div class="mini-card__contenido">
+          <span class="mini-card__titulo">Formato</span>
+          <span class="mini-card__valor formato-valor">{{ interp.formato }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="interp.pregunta" class="pregunta">
+      <p>{{ interp.pregunta }}</p>
+      <div class="input-row">
+        <input
+          [(ngModel)]="respuestaPregunta"
+          placeholder="Responda aquí..."
+          (keyup.enter)="responderPregunta()"
+        />
+        <button type="button" class="btn-primary" (click)="responderPregunta()" [disabled]="!respuestaPregunta.trim()">
+          Responder
+        </button>
+      </div>
+    </div>
+
+    <div class="acciones" *ngIf="!interp.pregunta">
+      <button type="button" class="btn-primary" (click)="generar()" [disabled]="cargando()">
+        <i class="fa-solid fa-play"></i> Generar reporte
+      </button>
+      <button type="button" class="secundario" (click)="nuevaConsulta()">
+        <i class="fa-solid fa-rotate-left"></i> Nueva consulta
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="resultado() as res" class="tabla-resultado">
+    <h3>Resultado</h3>
+    <p *ngIf="res.advertencia && res.registros.length" class="advertencia">
+      <i class="fa-solid fa-circle-info"></i> {{ res.advertencia }}
+    </p>
+
+    <div *ngIf="!res.registros.length" class="sin-datos">
+      <i class="fa-solid fa-folder-open"></i>
+      <p>{{ res.advertencia || 'No se encontraron trámites con esos criterios' }}</p>
+    </div>
+
+    <div class="tabla-wrapper" *ngIf="res.registros.length">
+      <table class="mat-style-table">
+        <thead>
+          <tr>
+            <th *ngFor="let col of res.columnas">{{ res.etiquetas[col] || col }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let registro of res.registros">
+            <td *ngFor="let col of res.columnas">{{ registro[col] }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="res.registros.length" class="acciones-descarga">
+      <button *ngIf="interpretacion()?.formato === 'excel'" type="button" class="btn-descarga excel" (click)="descargar('excel')" [disabled]="cargando()">
+        <mat-icon>download</mat-icon> Descargar Excel
+      </button>
+      <button *ngIf="interpretacion()?.formato === 'word'" type="button" class="btn-descarga word" (click)="descargar('word')" [disabled]="cargando()">
+        <mat-icon>download</mat-icon> Descargar Word
+      </button>
+      <button *ngIf="interpretacion()?.formato === 'pdf'" type="button" class="btn-descarga pdf" (click)="descargar('pdf')" [disabled]="cargando()">
+        <mat-icon>download</mat-icon> Descargar PDF
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="card historial-reportes" *ngIf="historial().length">
+  <h2>Reportes recientes</h2>
+  <p class="ayuda">Últimos {{ historial().length }} reportes generados en este navegador.</p>
+
+  <div class="data-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Instrucción</th>
+          <th>Formato</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of historial()">
+          <td>{{ item.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ item.instruccion }}</td>
+          <td>{{ formatoEtiqueta(item.formato) }}</td>
+          <td class="actions">
+            <button mat-icon-button type="button" matTooltip="Ver" (click)="verEnPantalla(item)" [disabled]="cargando()">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button *ngIf="item.formato !== 'pantalla'" mat-icon-button type="button" matTooltip="Descargar" (click)="descargarDeNuevo(item)" [disabled]="cargando()">
+              <mat-icon>download</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" type="button" matTooltip="Eliminar" (click)="eliminarDelHistorial(item)" [disabled]="cargando()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

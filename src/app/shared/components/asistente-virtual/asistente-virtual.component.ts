@@ -1,6 +1,7 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../core/services/auth.service';
 
 interface Mensaje {
   texto: string;
@@ -16,9 +17,15 @@ interface Mensaje {
   styleUrl: './asistente-virtual.component.scss',
 })
 export class AsistenteVirtualComponent {
+  private readonly authService = inject(AuthService);
+
   chatAbierto = false;
   mensajes: Mensaje[] = [];
   input = '';
+
+  get mostrar(): boolean {
+    return this.authService.getRol() !== 'CLIENTE';
+  }
 
   readonly sugerencias = [
     '¿Cómo creo un usuario?',

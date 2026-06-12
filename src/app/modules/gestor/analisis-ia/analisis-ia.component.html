@@ -3,7 +3,7 @@
   <!-- Cabecera -->
   <div class="analisis-header">
     <h2><i class="fas fa-brain"></i> Análisis de Cuellos de Botella</h2>
-    <p class="subtitulo">Detecta qué nodos tardan más en procesarse usando los datos reales de ejecuciones.</p>
+    <p class="subtitulo">Detecta qué nodos tardan más en procesarse usando ML (ensemble RF + GB + IsolationForest).</p>
   </div>
 
   <!-- Controles -->
@@ -20,9 +20,9 @@
     <button class="btn-analizar"
             (click)="analizar()"
             [disabled]="!politicaId() || analizando()">
-      <i class="fas" [class.fa-search]="!analizando()" [class.fa-spinner]="analizando()"
+      <i class="fas" [class.fa-brain]="!analizando()" [class.fa-spinner]="analizando()"
          [class.fa-spin]="analizando()"></i>
-      {{ analizando() ? 'Analizando...' : 'Analizar' }}
+      {{ analizando() ? 'Analizando...' : 'Analizar con IA' }}
     </button>
   </div>
 
@@ -39,9 +39,30 @@
       <div class="resumen-card">
         <p class="resumen-texto">{{ r.analisisGeneral }}</p>
         <span class="chip-tiempo">
-          <i class="fas fa-clock"></i> Promedio global: {{ r.tiempoPromedioGlobalMinutos | number:'1.0-0' }} min
+          <i class="fas fa-clock"></i> Promedio global: {{ r.tiempoPromedioGlobalMinutos | number:'1.0-1' }} min
         </span>
       </div>
+
+      <!-- Gráfico de barras -->
+      @if (chartData.length > 0) {
+        <div class="chart-section">
+          <h3><i class="fas fa-chart-bar"></i> Tiempo promedio por nodo</h3>
+          <div class="bar-chart">
+            @for (item of chartData; track item.nombre) {
+              <div class="bar-row">
+                <span class="bar-label" [title]="item.nombre">{{ item.nombre }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill"
+                       [style.width.%]="item.pct"
+                       [style.background]="item.color">
+                  </div>
+                </div>
+                <span class="bar-value">{{ item.tiempo }} min</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Sin cuellos -->
       @if (r.nodosCriticos.length === 0) {
@@ -51,7 +72,7 @@
         </div>
       }
 
-      <!-- Nodos críticos -->
+      <!-- Nodos detectados -->
       @if (r.nodosCriticos.length > 0) {
         <h3>Nodos con demoras detectadas</h3>
         <div class="nodos-grid">
@@ -74,9 +95,13 @@
                 </div>
               </div>
 
-              <p class="nodo-sugerencia">
-                <i class="fas fa-lightbulb"></i> {{ nodo.sugerencia }}
-              </p>
+              <div class="nodo-sugerencias">
+                @for (s of nodo.sugerencias; track s) {
+                  <p class="nodo-sugerencia">
+                    <i class="fas fa-lightbulb"></i> {{ s }}
+                  </p>
+                }
+              </div>
             </div>
           }
         </div>
@@ -88,8 +113,8 @@
   <!-- Estado inicial -->
   @if (!resultado() && !analizando() && !error()) {
     <div class="estado-inicial">
-      <i class="fas fa-chart-bar"></i>
-      <p>Selecciona una política y haz clic en <strong>Analizar</strong> para detectar cuellos de botella.</p>
+      <i class="fas fa-brain"></i>
+      <p>Selecciona una política y haz clic en <strong>Analizar con IA</strong> para detectar cuellos de botella con Machine Learning.</p>
     </div>
   }
 

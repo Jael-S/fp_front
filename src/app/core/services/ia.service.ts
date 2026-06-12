@@ -3,7 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
-import { IaResponse, GenerarDiagramaResponse, CuelloBotellaResponse, GenerarFormularioResponse } from '../models/ia.model';
+import {
+  IaResponse, GenerarDiagramaResponse, CuelloBotellaResponse, GenerarFormularioResponse,
+  GenerarDiagramaJointJsResponse,
+} from '../models/ia.model';
 
 @Injectable({ providedIn: 'root' })
 export class IaService {
@@ -24,10 +27,17 @@ export class IaService {
       .pipe(map((r) => r.data));
   }
 
-  /** Analiza cuellos de botella de una política. */
+  /** Analiza cuellos de botella de una política (Java puro, GET). */
   analizarCuellos(politicaId: string): Observable<CuelloBotellaResponse> {
     return this.http
       .get<ApiResponse<CuelloBotellaResponse>>(`${this.baseUrl}/analizar-cuellos/${politicaId}`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Analiza cuellos de botella con ML (ensemble via fp_services, POST). */
+  analizarCuellosConIa(politicaId: string): Observable<CuelloBotellaResponse> {
+    return this.http
+      .post<ApiResponse<CuelloBotellaResponse>>(`${this.baseUrl}/analizar-cuellos/${politicaId}`, {})
       .pipe(map((r) => r.data));
   }
 
@@ -35,6 +45,22 @@ export class IaService {
   generarFormulario(descripcion: string, nombreNodo: string): Observable<GenerarFormularioResponse> {
     return this.http
       .post<ApiResponse<GenerarFormularioResponse>>(`${this.baseUrl}/generar-formulario`, { descripcion, nombreNodo })
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * Genera un diagrama en formato JointJS (nodos + transiciones JSON).
+   * Envía los departamentos disponibles para que la IA los asigne correctamente.
+   */
+  generarDiagramaJointJs(
+    descripcion: string,
+    departamentos: Array<{ id: string; nombre: string }>,
+  ): Observable<GenerarDiagramaJointJsResponse> {
+    return this.http
+      .post<ApiResponse<GenerarDiagramaJointJsResponse>>(
+        `${this.baseUrl}/generar-diagrama`,
+        { descripcion, departamentos },
+      )
       .pipe(map((r) => r.data));
   }
 }

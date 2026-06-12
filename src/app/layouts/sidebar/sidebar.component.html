@@ -10,6 +10,8 @@
       <a routerLink="/gestor/tramites" routerLinkActive="active"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Tramites</span></a>
       <a routerLink="/gestor/monitoreo" routerLinkActive="active"><i class="fas fa-tv" aria-hidden="true"></i><span>Monitoreo</span></a>
       <a routerLink="/gestor/analisis-ia" routerLinkActive="active"><i class="fas fa-brain" aria-hidden="true"></i><span>Análisis IA</span></a>
+      <a routerLink="/gestor/documentos" routerLinkActive="active"><i class="fas fa-folder-open" aria-hidden="true"></i><span>Documentos</span></a>
+      <a routerLink="/gestor/reportes" routerLinkActive="active"><i class="fas fa-file-export" aria-hidden="true"></i><span>Reportes</span></a>
     </ng-container>
 
     <ng-container *ngIf="role() === 'ADMINISTRADOR_AREA'">
@@ -22,6 +24,10 @@
     <ng-container *ngIf="role() === 'FUNCIONARIO'">
       <a routerLink="/funcionario/mis-tareas" routerLinkActive="active"><i class="fas fa-tasks" aria-hidden="true"></i><span>Mis tareas</span></a>
       <a routerLink="/funcionario/historial" routerLinkActive="active"><i class="fas fa-history" aria-hidden="true"></i><span>Historial</span></a>
+    </ng-container>
+
+    <ng-container *ngIf="role() === 'CLIENTE'">
+      <a routerLink="/cliente/agente" routerLinkActive="active"><i class="fas fa-robot" aria-hidden="true"></i><span>Asistente Virtual</span></a>
     </ng-container>
   </nav>
 </aside>

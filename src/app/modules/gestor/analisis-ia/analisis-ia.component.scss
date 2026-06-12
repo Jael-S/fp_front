@@ -121,9 +121,10 @@ h3 {
   padding: 1rem;
   border: 1px solid transparent;
 
-  &.riesgo-alto  { background: #fff1f2; border-color: #fca5a5; }
-  &.riesgo-medio { background: #fffbeb; border-color: #fcd34d; }
-  &.riesgo-bajo  { background: #f0fdf4; border-color: #86efac; }
+  &.riesgo-critico { background: #fff0f0; border-color: #ef4444; border-left: 4px solid #dc2626; }
+  &.riesgo-alto    { background: #fff7f0; border-color: #fb923c; border-left: 4px solid #ea580c; }
+  &.riesgo-medio   { background: #fffbeb; border-color: #fcd34d; border-left: 4px solid #d97706; }
+  &.riesgo-bajo    { background: #f0fdf4; border-color: #86efac; border-left: 4px solid #16a34a; }
 }
 
 .nodo-head {
@@ -132,7 +133,8 @@ h3 {
   gap: 0.5rem;
   margin-bottom: 0.75rem;
 
-  .fa-exclamation-triangle { color: #dc2626; }
+  .fa-radiation            { color: #dc2626; }
+  .fa-exclamation-triangle { color: #ea580c; }
   .fa-exclamation-circle   { color: #d97706; }
   .fa-check-circle         { color: #16a34a; }
 }
@@ -178,12 +180,77 @@ h3 {
   color: #111827;
 }
 
+.nodo-sugerencias {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .nodo-sugerencia {
   margin: 0;
   font-size: 0.8rem;
   color: #374151;
   line-height: 1.4;
   i { color: #f59e0b; margin-right: 0.25rem; }
+}
+
+// ── Gráfico de barras ──────────────────────────────────────────────────────────
+
+.chart-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem;
+
+  h3 {
+    margin: 0 0 0.85rem;
+    font-size: 0.9rem;
+    color: #374151;
+    i { color: #6366f1; margin-right: 0.4rem; }
+  }
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 56px;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.bar-label {
+  font-size: 0.8rem;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: 16px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.bar-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .estado-inicial {

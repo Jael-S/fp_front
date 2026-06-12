@@ -116,4 +116,40 @@ export class PoliticaService {
       .put<ApiResponse<void>>(`${this.baseUrl}/${politicaId}/decisiones/${gatewayId}/condiciones`, payload)
       .pipe(map(() => void 0));
   }
+
+  // ── JointJS ────────────────────────────────────────────────────────────────
+
+  /** Obtiene diagrama en formato JointJS (nodos + transiciones + datosDiagramaJson). */
+  getDiagrama(politicaId: string): Observable<any> {
+    return this.http
+      .get<ApiResponse<any>>(`${this.baseUrl}/${politicaId}/diagrama`)
+      .pipe(map((res) => res.data ?? res));
+  }
+
+  /** Guarda diagrama en formato JointJS — llama a PUT /api/v1/politicas/{id}/diagrama. */
+  guardarDiagramaJointJs(politicaId: string, payload: {
+    datosDiagramaJson: string;
+    nodos: Array<{
+      id: null;
+      tempId: string;
+      tipo: string;
+      nombre: string;
+      departamentoId: string | null;
+      formularioId: string | null;
+      posicionX: number;
+      posicionY: number;
+    }>;
+    transiciones: Array<{
+      id: null;
+      nodoOrigenTempId: string;
+      nodoDestinoTempId: string;
+      tipo: string;
+      etiqueta: string | null;
+      condicion: null;
+    }>;
+  }): Observable<any> {
+    return this.http
+      .put<ApiResponse<any>>(`${this.baseUrl}/${politicaId}/diagrama`, payload)
+      .pipe(map((res) => res.data ?? res));
+  }
 }

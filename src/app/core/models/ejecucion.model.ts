@@ -4,6 +4,7 @@ export interface Ejecucion {
   tramiteTitulo?: string | null;
   nodoId: string;
   nodoNombre?: string | null;
+  nodoTipo?: string | null;
   departamentoId?: string | null;
   departamentoNombre?: string | null;
   usuarioAsignadoId: string;
@@ -14,4 +15,5 @@ export interface Ejecucion {
   respuestasFormulario?: Record<string, unknown> | null;
   adjuntos?: string[] | null;
   observaciones?: string | null;
+  adjuntosCliente?: string[] | null;
 }

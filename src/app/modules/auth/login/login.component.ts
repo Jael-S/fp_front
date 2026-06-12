@@ -45,6 +45,8 @@ export class LoginComponent {
           this.router.navigate(['/gestor']);
         } else if (response.rol === Rol.ADMINISTRADOR_AREA) {
           this.router.navigate(['/admin-area']);
+        } else if (response.rol === Rol.CLIENTE) {
+          this.router.navigate(['/cliente/agente']);
         } else {
           this.router.navigate(['/funcionario']);
         }

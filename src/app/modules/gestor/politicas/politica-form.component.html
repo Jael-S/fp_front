@@ -4,63 +4,134 @@
   <h2>{{ data.politica ? 'Editar política' : 'Crear política' }}</h2>
 
   <form [formGroup]="form" class="form-grid">
+
+    <!-- Nombre -->
     <label>
       Nombre <span class="required">*</span>
-      <input formControlName="nombre" />
+      <input formControlName="nombre" placeholder="Nombre de la política" />
       @if (form.controls.nombre.touched && form.controls.nombre.hasError('required')) {
         <small class="error">El nombre es obligatorio.</small>
       }
     </label>
 
+    <!-- Descripción -->
     <label>
       Descripción del proceso
-      <textarea rows="4" formControlName="descripcion"
-                placeholder="Describe el proceso en lenguaje natural para que la IA genere el diagrama..."></textarea>
+      <textarea rows="3" formControlName="descripcion"
+                placeholder="Describe brevemente el proceso..."></textarea>
     </label>
 
-    <!-- Sección IA -->
-    <div class="ia-section">
-      <p class="ia-title"><i class="fas fa-robot"></i> Asistente IA</p>
-      <div class="ia-buttons">
-        <button type="button" class="btn-voz"
-                [class.escuchando]="escuchando()"
-                (click)="iniciarGrabacion()"
-                [disabled]="escuchando()">
-          <i class="fas" [class.fa-microphone]="!escuchando()" [class.fa-circle]="escuchando()"></i>
-          {{ escuchando() ? 'Escuchando...' : 'Grabar descripción' }}
-        </button>
+    <!-- Etiquetas -->
+    <div class="field-group">
+      <span class="field-label">
+        Etiquetas para detección
+        <span class="hint">Palabras clave que el agente usará para reconocer este trámite (NLP).</span>
+      </span>
 
-        <button type="button" class="btn-ia"
-                (click)="generarDiagramaConIA()"
-                [disabled]="generando()">
-          <i class="fas fa-magic"></i>
-          {{ generando() ? 'Generando...' : 'Generar diagrama' }}
+      <div class="tag-input-row">
+        <input
+          class="tag-input"
+          [(ngModel)]="nuevaEtiqueta"
+          [ngModelOptions]="{ standalone: true }"
+          (keydown)="onEtiquetaKeydown($event)"
+          placeholder="Ej: licencia, renovación, conducir"
+        />
+        <button class="btn-add" type="button" (click)="agregarEtiqueta()"
+                [disabled]="!nuevaEtiqueta.trim()">
+          <i class="fas fa-plus"></i> Agregar
         </button>
       </div>
 
-      @if (mensajeIA()) {
-        <p class="ia-mensaje" [class.ia-ok]="tareasIA().length > 0">
-          {{ mensajeIA() }}
-        </p>
-      }
-
-      @if (tareasIA().length > 0) {
-        <div class="tareas-detectadas">
-          <p class="tareas-titulo">Tareas detectadas:</p>
-          <ol>
-            @for (t of tareasIA(); track t) {
-              <li>{{ t }}</li>
-            }
-          </ol>
+      @if (etiquetas.length) {
+        <div class="chips">
+          @for (tag of etiquetas; track tag) {
+            <span class="chip chip-blue">
+              {{ tag }}
+              <button type="button" class="chip-remove" (click)="quitarEtiqueta(tag)">×</button>
+            </span>
+          }
         </div>
+      } @else {
+        <p class="empty-hint">Sin etiquetas aún. Presiona Enter o coma para agregar.</p>
       }
     </div>
+
+    <!-- Requisitos Obligatorios -->
+    <div class="field-group">
+      <span class="field-label">
+        Documentos obligatorios
+        <span class="hint">Documentos que el cliente DEBE presentar para iniciar este trámite.</span>
+      </span>
+
+      <div class="tag-input-row">
+        <input
+          class="tag-input"
+          [(ngModel)]="nuevoObligatorio"
+          [ngModelOptions]="{ standalone: true }"
+          (keydown)="onObligatorioKeydown($event)"
+          placeholder="Ej: Cédula de identidad, Factura original"
+        />
+        <button class="btn-add btn-add-red" type="button" (click)="agregarObligatorio()"
+                [disabled]="!nuevoObligatorio.trim()">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </div>
+
+      @if (requisitosObligatorios.length) {
+        <div class="chips">
+          @for (req of requisitosObligatorios; track req) {
+            <span class="chip chip-red">
+              <i class="fas fa-asterisk chip-icon"></i> {{ req }}
+              <button type="button" class="chip-remove" (click)="quitarObligatorio(req)">×</button>
+            </span>
+          }
+        </div>
+      } @else {
+        <p class="empty-hint">Sin documentos obligatorios. Presiona Enter para agregar.</p>
+      }
+    </div>
+
+    <!-- Requisitos Opcionales -->
+    <div class="field-group">
+      <span class="field-label">
+        Documentos opcionales
+        <span class="hint">Documentos adicionales que el cliente puede presentar opcionalmente.</span>
+      </span>
+
+      <div class="tag-input-row">
+        <input
+          class="tag-input"
+          [(ngModel)]="nuevoOpcional"
+          [ngModelOptions]="{ standalone: true }"
+          (keydown)="onOpcionalKeydown($event)"
+          placeholder="Ej: Carta de respaldo, Comprobante de domicilio"
+        />
+        <button class="btn-add btn-add-green" type="button" (click)="agregarOpcional()"
+                [disabled]="!nuevoOpcional.trim()">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </div>
+
+      @if (requisitosOpcionales.length) {
+        <div class="chips">
+          @for (req of requisitosOpcionales; track req) {
+            <span class="chip chip-green">
+              <i class="fas fa-circle-check chip-icon"></i> {{ req }}
+              <button type="button" class="chip-remove" (click)="quitarOpcional(req)">×</button>
+            </span>
+          }
+        </div>
+      } @else {
+        <p class="empty-hint">Sin documentos opcionales. Presiona Enter para agregar.</p>
+      }
+    </div>
+
   </form>
 
   <div class="actions">
     <button class="btn" type="button" mat-dialog-close>Cancelar</button>
     <button class="btn-primary" type="button" (click)="save()">
-      {{ data.politica ? 'Guardar' : 'Crear' }}
+      {{ data.politica ? 'Guardar cambios' : 'Crear política' }}
     </button>
   </div>
 </div>
